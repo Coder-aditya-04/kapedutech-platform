@@ -1,35 +1,85 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, router } from "expo-router";
+import { useEffect } from "react";
+import { useAuth } from "@/src/context/AuthContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import { savePushToken } from "@/src/api/auth";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+async function ensurePushToken() {
+  try {
+    const parentStr = await AsyncStorage.getItem("parent");
+    if (!parentStr) return;
+    const parent = JSON.parse(parentStr);
+
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    const { status } = existing === "granted"
+      ? { status: existing }
+      : await Notifications.requestPermissionsAsync();
+    if (status !== "granted") return;
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) return;
+
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    if (token.data) {
+      await savePushToken(parent.id, token.data);
+      console.log("[Push] Token registered:", token.data);
+    }
+  } catch (e) {
+    console.log("[Push] ensurePushToken failed:", e);
+  }
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { phone } = useAuth();
+
+  useEffect(() => {
+    if (!phone) {
+      setTimeout(() => router.replace("/login"), 0);
+    } else {
+      ensurePushToken();
+    }
+  }, [phone]);
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: "#4F46E5",
+        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarStyle: { backgroundColor: "#FFFFFF", borderTopColor: "#E5E7EB" },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="notifications"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Notifications",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bell" color={color} size={size} />
+          ),
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }
