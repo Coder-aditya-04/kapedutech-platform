@@ -61,10 +61,13 @@ jobs:
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          groups: testers
-          releaseNotes: ${{ github.event.inputs.release_notes || format('Commit {0} — {1}', github.sha, github.event.head_commit.message) }}
-          file: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+          npm install -g firebase-tools
+          firebase appdistribution:distribute \
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk \
+            --app ${{ secrets.FIREBASE_APP_ID }} \
+            --groups testers \
+            --release-notes "Build ${{ github.run_number }} — ${{ github.sha }}"
