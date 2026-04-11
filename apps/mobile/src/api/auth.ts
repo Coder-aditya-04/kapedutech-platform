@@ -1,5 +1,6 @@
-const BASE_URL = "http://192.168.2.174:4000/api/auth";
-const ATTENDANCE_URL = "http://192.168.2.174:4000/api/attendance";
+// For local testing use your Mac's IP; for production use deployed API URL
+const BASE_URL = "http://10.58.145.97:4000/api/auth";
+const ATTENDANCE_URL = "http://10.58.145.97:4000/api/attendance";
 
 export type AttendanceRecord = {
   id: string;

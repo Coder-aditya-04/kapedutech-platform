@@ -3,12 +3,16 @@ import { useEffect } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { savePushToken } from "@/src/api/auth";
 
+// Guard: expo-notifications removed from Expo Go in SDK 53+
+// In production APK it works fine; in Expo Go we just skip it
 async function ensurePushToken() {
   try {
+    // Dynamic import so Expo Go doesn't crash the whole module on import
+    const Notifications = await import("expo-notifications");
+
     const parentStr = await AsyncStorage.getItem("parent");
     if (!parentStr) return;
     const parent = JSON.parse(parentStr);
@@ -28,7 +32,8 @@ async function ensurePushToken() {
       console.log("[Push] Token registered:", token.data);
     }
   } catch (e) {
-    console.log("[Push] ensurePushToken failed:", e);
+    // Silently skip in Expo Go or if notifications not available
+    console.log("[Push] Skipped:", (e as Error)?.message ?? e);
   }
 }
 

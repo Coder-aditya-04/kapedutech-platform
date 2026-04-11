@@ -7,28 +7,26 @@ import {
 import { Text } from "react-native-paper";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { useAuth } from "@/src/context/AuthContext";
 import { requestOtp, verifyOtp, savePushToken } from "@/src/api/auth";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true, shouldPlaySound: true,
-    shouldSetBadge: true, shouldShowBanner: true, shouldShowList: true,
-  }),
-});
-
 async function registerForPushNotifications(): Promise<string | null> {
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  const { status } = existing === "granted"
-    ? { status: existing }
-    : await Notifications.requestPermissionsAsync();
-  if (status !== "granted") return null;
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  if (!projectId) return null;
-  const token = await Notifications.getExpoPushTokenAsync({ projectId });
-  return token.data;
+  try {
+    // Dynamic import — expo-notifications removed from Expo Go SDK 53+
+    const Notifications = await import("expo-notifications");
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    const { status } = existing === "granted"
+      ? { status: existing }
+      : await Notifications.requestPermissionsAsync();
+    if (status !== "granted") return null;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) return null;
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    return token.data;
+  } catch {
+    return null;
+  }
 }
 
 type Step = "phone" | "otp";
