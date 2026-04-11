@@ -54,16 +54,31 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: "1"
 
-      - name: Pin Gradle to 8.10.2
+      - name: Pin Gradle to 8.13
         run: |
           sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-all.zip|' apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
           cat apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: Build debug APK
+      - name: Create signing keystore for release build
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair -v \
+            -keystore ~/.android/release.keystore \
+            -alias releasekey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass kapedutech -keypass kapedutech \
+            -dname "CN=KapEduTech,O=KapEduTech,C=IN"
+
+      - name: Build release APK
         working-directory: apps/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$HOME/.android/release.keystore \
+            -Pandroid.injected.signing.store.password=kapedutech \
+            -Pandroid.injected.signing.key.alias=releasekey \
+            -Pandroid.injected.signing.key.password=kapedutech \
+            --no-daemon --stacktrace
 
       - name: Upload to Firebase App Distribution
         env:
@@ -72,7 +87,7 @@ jobs:
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
           npm install -g firebase-tools
           firebase appdistribution:distribute \
-            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk \
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
             --app ${{ secrets.FIREBASE_APP_ID }} \
             --groups testers \
             --release-notes "Build ${{ github.run_number }} — ${{ github.sha }}"
