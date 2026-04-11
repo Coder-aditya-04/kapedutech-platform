@@ -1,13 +1,17 @@
-import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator } from "react-native";
+import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator, TouchableOpacity } from "react-native";
 import { Text, Surface, Chip, Divider } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/src/context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { getStudentAttendance, getTodayAttendance, type AttendanceRecord, type TodayAttendance } from "@/src/api/auth";
 
 type Student = { id: string; name: string; enrollmentNo: string; batch: string };
 type Parent = { id: string; name: string; phone: string; students: Student[] };
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const WEEK_LABELS = ["S","M","T","W","T","F","S"];
 
 function getLast7Days() {
   return Array.from({ length: 7 }, (_, i) => {
@@ -24,13 +28,6 @@ function getGreeting() {
   return "Good Evening";
 }
 
-function greetingEmoji() {
-  const h = new Date().getHours();
-  if (h < 12) return "🌅";
-  if (h < 17) return "☀️";
-  return "🌙";
-}
-
 function formatTime(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -40,6 +37,20 @@ function formatDateFull() {
   return new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
+function getMonthGrid(year: number, month: number): (number | null)[] {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
+function toDateStr(year: number, month: number, day: number) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 export default function DashboardScreen() {
   const { phone } = useAuth();
   const [parent, setParent] = useState<Parent | null>(null);
@@ -47,6 +58,11 @@ export default function DashboardScreen() {
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const [calMonth, setCalMonth] = useState({ year: now.getFullYear(), month: now.getMonth() });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -77,16 +93,53 @@ export default function DashboardScreen() {
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
+  // Build attendance map from history: date -> { punchIn, punchOut }
+  const attendanceMap = useMemo(() => {
+    const map: Record<string, { punchIn: string | null; punchOut: string | null }> = {};
+    history.forEach(r => {
+      if (!map[r.date]) map[r.date] = { punchIn: null, punchOut: null };
+      if (r.type === "PUNCH_IN") map[r.date].punchIn = r.markedAt;
+      if (r.type === "PUNCH_OUT") map[r.date].punchOut = r.markedAt;
+    });
+    // Also include today from the today endpoint
+    if (today.punchIn || today.punchOut) {
+      map[todayStr] = { punchIn: today.punchIn, punchOut: today.punchOut };
+    }
+    return map;
+  }, [history, today, todayStr]);
+
   const last7 = getLast7Days();
   const weeklyData = last7.map(date => ({
     day: new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short" }),
     date,
     value: history.some(r => r.date === date) ? 1 : 0,
-    isToday: date === new Date().toISOString().slice(0, 10),
+    isToday: date === todayStr,
   }));
   const attendancePct = Math.round((weeklyData.filter(d => d.value).length / 7) * 100);
   const recent = history.slice(0, 5);
   const student = parent?.students?.[0];
+
+  const monthGrid = getMonthGrid(calMonth.year, calMonth.month);
+  const isCurrentMonth = calMonth.year === now.getFullYear() && calMonth.month === now.getMonth();
+
+  function goToPrevMonth() {
+    setCalMonth(prev => {
+      if (prev.month === 0) return { year: prev.year - 1, month: 11 };
+      return { year: prev.year, month: prev.month - 1 };
+    });
+    setSelectedDate(null);
+  }
+
+  function goToNextMonth() {
+    if (isCurrentMonth) return;
+    setCalMonth(prev => {
+      if (prev.month === 11) return { year: prev.year + 1, month: 0 };
+      return { year: prev.year, month: prev.month + 1 };
+    });
+    setSelectedDate(null);
+  }
+
+  const selectedAttendance = selectedDate ? (attendanceMap[selectedDate] ?? null) : null;
 
   if (loading) {
     return (
@@ -108,7 +161,7 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greeting}>{getGreeting()} {greetingEmoji()}</Text>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.phone}>+91 {phone}</Text>
             </View>
             <View style={styles.dateBadge}>
@@ -140,7 +193,11 @@ export default function DashboardScreen() {
               <View style={styles.punchRow}>
                 <View style={styles.punchItem}>
                   <View style={[styles.punchIconWrap, { backgroundColor: today.punchIn ? "#DCFCE7" : "#F3F4F6" }]}>
-                    <Text style={{ fontSize: 18 }}>{today.punchIn ? "✅" : "⏰"}</Text>
+                    <Ionicons
+                      name={today.punchIn ? "checkmark-circle" : "time-outline"}
+                      size={22}
+                      color={today.punchIn ? "#16A34A" : "#9CA3AF"}
+                    />
                   </View>
                   <Text style={styles.punchLabel}>Punch In</Text>
                   <Text style={[styles.punchTime, { color: today.punchIn ? "#16A34A" : "#9CA3AF" }]}>
@@ -150,7 +207,11 @@ export default function DashboardScreen() {
                 <View style={styles.punchDivider} />
                 <View style={styles.punchItem}>
                   <View style={[styles.punchIconWrap, { backgroundColor: today.punchOut ? "#DBEAFE" : "#F3F4F6" }]}>
-                    <Text style={{ fontSize: 18 }}>{today.punchOut ? "🔵" : "⏳"}</Text>
+                    <Ionicons
+                      name={today.punchOut ? "log-out-outline" : "ellipsis-horizontal-circle-outline"}
+                      size={22}
+                      color={today.punchOut ? "#2563EB" : "#9CA3AF"}
+                    />
                   </View>
                   <Text style={styles.punchLabel}>Punch Out</Text>
                   <Text style={[styles.punchTime, { color: today.punchOut ? "#2563EB" : "#9CA3AF" }]}>
@@ -161,6 +222,134 @@ export default function DashboardScreen() {
             </>
           ) : (
             <Text style={{ color: "#9CA3AF", fontSize: 13 }}>No students linked to your account</Text>
+          )}
+        </Surface>
+
+        {/* Attendance Calendar */}
+        <Surface style={styles.card} elevation={1}>
+          {/* Calendar header */}
+          <View style={styles.calHeader}>
+            <Text style={styles.cardTitle}>Attendance Calendar</Text>
+            <View style={styles.calNav}>
+              <TouchableOpacity onPress={goToPrevMonth} style={styles.calNavBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="chevron-back" size={16} color="#4F46E5" />
+              </TouchableOpacity>
+              <Text style={styles.calNavTitle}>
+                {MONTH_NAMES[calMonth.month].slice(0, 3)} {calMonth.year}
+              </Text>
+              <TouchableOpacity
+                onPress={goToNextMonth}
+                style={styles.calNavBtn}
+                disabled={isCurrentMonth}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="chevron-forward" size={16} color={isCurrentMonth ? "#D1D5DB" : "#4F46E5"} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Weekday labels */}
+          <View style={styles.calWeekRow}>
+            {WEEK_LABELS.map((label, i) => (
+              <Text key={i} style={styles.calWeekLabel}>{label}</Text>
+            ))}
+          </View>
+
+          {/* Calendar grid */}
+          <View style={styles.calGrid}>
+            {monthGrid.map((day, idx) => {
+              if (!day) {
+                return <View key={idx} style={styles.calCell} />;
+              }
+              const dateStr = toDateStr(calMonth.year, calMonth.month, day);
+              const hasAtt = !!attendanceMap[dateStr];
+              const isTodayCell = dateStr === todayStr;
+              const isSelected = selectedDate === dateStr;
+              const isFuture = dateStr > todayStr;
+
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.calCell,
+                    styles.calDay,
+                    isSelected && styles.calDaySelected,
+                    !isSelected && isTodayCell && styles.calDayToday,
+                    !isSelected && !isTodayCell && hasAtt && styles.calDayHasAtt,
+                    isFuture && styles.calDayFuture,
+                  ]}
+                  onPress={() => {
+                    if (!isFuture) setSelectedDate(isSelected ? null : dateStr);
+                  }}
+                  disabled={isFuture}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.calDayText,
+                    (isSelected || isTodayCell) && { color: "#fff" },
+                    !isSelected && !isTodayCell && hasAtt && { color: "#4F46E5", fontWeight: "700" },
+                    isFuture && { color: "#D1D5DB" },
+                  ]}>
+                    {day}
+                  </Text>
+                  {hasAtt && !isSelected && !isTodayCell && (
+                    <View style={styles.calDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Legend */}
+          <View style={styles.calLegend}>
+            <View style={styles.calLegendItem}>
+              <View style={[styles.calLegendDot, { backgroundColor: "#4F46E5" }]} />
+              <Text style={styles.calLegendText}>Present</Text>
+            </View>
+            <View style={styles.calLegendItem}>
+              <View style={[styles.calLegendDot, { backgroundColor: "#E5E7EB" }]} />
+              <Text style={styles.calLegendText}>Absent</Text>
+            </View>
+            <View style={styles.calLegendItem}>
+              <View style={[styles.calLegendDot, { backgroundColor: "#818CF8", borderWidth: 2, borderColor: "#4F46E5" }]} />
+              <Text style={styles.calLegendText}>Today</Text>
+            </View>
+          </View>
+
+          {/* Selected date detail */}
+          {selectedDate && (
+            <View style={styles.calDetail}>
+              <Divider style={{ marginBottom: 14 }} />
+              <Text style={styles.calDetailDate}>
+                {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-IN", {
+                  weekday: "long", day: "numeric", month: "long", year: "numeric"
+                })}
+              </Text>
+              {selectedAttendance ? (
+                <View style={styles.calDetailRow}>
+                  <View style={styles.calDetailItem}>
+                    <Ionicons name="log-in-outline" size={16} color="#16A34A" style={{ marginBottom: 4 }} />
+                    <Text style={styles.calDetailLabel}>Punch In</Text>
+                    <Text style={[styles.calDetailTime, { color: selectedAttendance.punchIn ? "#16A34A" : "#9CA3AF" }]}>
+                      {formatTime(selectedAttendance.punchIn)}
+                    </Text>
+                  </View>
+                  <View style={styles.calDetailDivider} />
+                  <View style={styles.calDetailItem}>
+                    <Ionicons name="log-out-outline" size={16} color="#2563EB" style={{ marginBottom: 4 }} />
+                    <Text style={styles.calDetailLabel}>Punch Out</Text>
+                    <Text style={[styles.calDetailTime, { color: selectedAttendance.punchOut ? "#2563EB" : "#9CA3AF" }]}>
+                      {formatTime(selectedAttendance.punchOut)}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.calDetailAbsent}>
+                  <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+                  <Text style={styles.calDetailAbsentText}>No attendance recorded</Text>
+                </View>
+              )}
+            </View>
           )}
         </Surface>
 
@@ -194,7 +383,7 @@ export default function DashboardScreen() {
           <Text style={styles.cardTitle}>Recent Activity</Text>
           {recent.length === 0 ? (
             <View style={styles.emptyActivity}>
-              <Text style={{ fontSize: 32 }}>📋</Text>
+              <Ionicons name="document-text-outline" size={32} color="#D1D5DB" />
               <Text style={{ color: "#9CA3AF", fontSize: 13, marginTop: 8 }}>No attendance records yet</Text>
             </View>
           ) : (
@@ -204,7 +393,11 @@ export default function DashboardScreen() {
                   <View style={[styles.activityIcon, {
                     backgroundColor: item.type === "PUNCH_IN" ? "#DCFCE7" : "#DBEAFE"
                   }]}>
-                    <Text style={{ fontSize: 16 }}>{item.type === "PUNCH_IN" ? "✅" : "🔵"}</Text>
+                    <Ionicons
+                      name={item.type === "PUNCH_IN" ? "log-in-outline" : "log-out-outline"}
+                      size={18}
+                      color={item.type === "PUNCH_IN" ? "#16A34A" : "#2563EB"}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.activityDate}>
@@ -258,6 +451,38 @@ const styles = StyleSheet.create({
   punchLabel: { color: "#6B7280", fontSize: 12 },
   punchTime: { fontSize: 18, fontWeight: "800" },
   punchIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+
+  // Calendar
+  calHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  calNav: { flexDirection: "row", alignItems: "center", gap: 8 },
+  calNavBtn: { width: 28, height: 28, borderRadius: 8, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center" },
+  calNavTitle: { fontSize: 13, fontWeight: "700", color: "#374151", minWidth: 64, textAlign: "center" },
+  calWeekRow: { flexDirection: "row", marginBottom: 6 },
+  calWeekLabel: { flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: "#9CA3AF", paddingVertical: 4 },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: { width: "14.2857%", aspectRatio: 1, justifyContent: "center", alignItems: "center" },
+  calDay: { borderRadius: 8 },
+  calDaySelected: { backgroundColor: "#4F46E5" },
+  calDayToday: { backgroundColor: "#818CF8" },
+  calDayHasAtt: { backgroundColor: "#EEF2FF" },
+  calDayFuture: { opacity: 0.4 },
+  calDayText: { fontSize: 13, color: "#374151" },
+  calDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#4F46E5", position: "absolute", bottom: 3 },
+
+  calLegend: { flexDirection: "row", gap: 16, marginTop: 12, justifyContent: "center" },
+  calLegendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  calLegendDot: { width: 10, height: 10, borderRadius: 5 },
+  calLegendText: { fontSize: 11, color: "#9CA3AF" },
+
+  calDetail: { marginTop: 4 },
+  calDetailDate: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 12, textAlign: "center" },
+  calDetailRow: { flexDirection: "row", alignItems: "center" },
+  calDetailItem: { flex: 1, alignItems: "center", gap: 2 },
+  calDetailDivider: { width: 1, height: 48, backgroundColor: "#E5E7EB" },
+  calDetailLabel: { fontSize: 11, color: "#9CA3AF" },
+  calDetailTime: { fontSize: 18, fontWeight: "800" },
+  calDetailAbsent: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8 },
+  calDetailAbsentText: { fontSize: 13, color: "#9CA3AF" },
 
   percentChip: { borderRadius: 20 },
   barChart: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", height: 80, gap: 4, marginTop: 4 },
