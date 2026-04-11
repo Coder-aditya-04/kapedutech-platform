@@ -123,14 +123,14 @@ export default function StudentsPage() {
                     type={f.type} placeholder={f.placeholder} required
                     value={(form as Record<string, string>)[f.key]}
                     onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 14, boxSizing: "border-box", outline: "none" }}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 14, boxSizing: "border-box", outline: "none", color: "#111827", background: "#fff" }}
                   />
                 </div>
               ))}
               <div>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Batch</label>
                 <select value={form.batch} onChange={e => setForm(prev => ({ ...prev, batch: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 14, boxSizing: "border-box", outline: "none" }}>
+                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #D1D5DB", borderRadius: 8, fontSize: 14, boxSizing: "border-box", outline: "none", color: "#111827", background: "#fff" }}>
                   <option value="JEE">JEE</option>
                   <option value="NEET">NEET</option>
                 </select>
