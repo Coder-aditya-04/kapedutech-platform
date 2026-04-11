@@ -80,12 +80,9 @@ export async function getStudentTodayAttendance(req: Request, res: Response): Pr
   });
   const punchIn = records.find(r => r.type === "PUNCH_IN");
   const punchOut = records.find(r => r.type === "PUNCH_OUT");
+  // Return raw ISO timestamps so the mobile client formats in its own timezone
   res.json({
-    punchIn: punchIn
-      ? new Date(punchIn.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
-      : null,
-    punchOut: punchOut
-      ? new Date(punchOut.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
-      : null,
+    punchIn: punchIn ? punchIn.markedAt.toISOString() : null,
+    punchOut: punchOut ? punchOut.markedAt.toISOString() : null,
   });
 }

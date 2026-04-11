@@ -46,7 +46,7 @@ export default function ScanPage() {
 
     scanner.start(
       { facingMode: "environment" },
-      { fps: 30, qrbox: { width: qrbox, height: qrbox } },
+      { fps: 60, qrbox: { width: qrbox, height: qrbox }, aspectRatio: 1, disableFlip: true },
       handleScan, () => {}
     ).then(() => {
       setTimeout(() => {
