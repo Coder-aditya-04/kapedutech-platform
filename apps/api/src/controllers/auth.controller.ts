@@ -30,8 +30,35 @@ export async function requestOtp(req: Request, res: Response): Promise<void> {
 
   await prisma.otp.create({ data: { phone, otp, expiresAt } });
 
-  // TODO: send via SMS (e.g. Twilio / MSG91)
-  console.log(`[OTP] Phone: ${phone}  OTP: ${otp}  Expires: ${expiresAt.toISOString()}`);
+  // Send OTP via Fast2SMS (India) if API key is set, otherwise log to console
+  const fast2smsKey = process.env["FAST2SMS_API_KEY"];
+  if (fast2smsKey) {
+    try {
+      const smsRes = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+        method: "POST",
+        headers: {
+          authorization: fast2smsKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          route: "otp",
+          variables_values: otp,
+          numbers: phone,
+        }),
+      });
+      const smsData = await smsRes.json() as { return: boolean; message?: string[] };
+      if (!smsData.return) {
+        console.error(`[OTP] SMS failed:`, smsData.message);
+      } else {
+        console.log(`[OTP] SMS sent to ${phone}`);
+      }
+    } catch (e) {
+      console.error(`[OTP] SMS error:`, e);
+    }
+  } else {
+    // Development fallback — read from Render/server logs
+    console.log(`[OTP] Phone: ${phone}  OTP: ${otp}  Expires: ${expiresAt.toISOString()}`);
+  }
 
   res.status(200).json({ message: "OTP sent successfully." });
 }
