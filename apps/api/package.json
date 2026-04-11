@@ -40,6 +40,8 @@
     "typescript": "^6.0.2"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/morgan": "^1.9.10",
     "@types/qrcode": "^1.5.6"
   }
 }
