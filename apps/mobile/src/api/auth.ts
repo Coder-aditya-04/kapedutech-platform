@@ -1,6 +1,5 @@
-// For local testing use your Mac's IP; for production use deployed API URL
-const BASE_URL = "http://10.58.145.97:4000/api/auth";
-const ATTENDANCE_URL = "http://10.58.145.97:4000/api/attendance";
+const BASE_URL = "https://kapedutech-api-production.up.railway.app/api/auth";
+const ATTENDANCE_URL = "https://kapedutech-api-production.up.railway.app/api/attendance";
 
 export type AttendanceRecord = {
   id: string;
