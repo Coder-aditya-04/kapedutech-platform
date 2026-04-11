@@ -1,4 +1,37 @@
 const BASE_URL = "http://192.168.2.174:4000/api/auth";
+const ATTENDANCE_URL = "http://192.168.2.174:4000/api/attendance";
+
+export type AttendanceRecord = {
+  id: string;
+  date: string;
+  type: "PUNCH_IN" | "PUNCH_OUT";
+  markedAt: string;
+};
+
+export type TodayAttendance = {
+  punchIn: string | null;
+  punchOut: string | null;
+};
+
+export async function getStudentAttendance(studentId: string, token: string): Promise<AttendanceRecord[]> {
+  try {
+    const res = await fetch(`${ATTENDANCE_URL}/student/${studentId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+
+export async function getTodayAttendance(studentId: string, token: string): Promise<TodayAttendance> {
+  try {
+    const res = await fetch(`${ATTENDANCE_URL}/student/${studentId}/today`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return { punchIn: null, punchOut: null };
+    return res.json();
+  } catch { return { punchIn: null, punchOut: null }; }
+}
 
 export type Student = {
   id: string;

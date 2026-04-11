@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
-type ScanStatus = "idle" | "success" | "already_marked" | "not_found" | "error";
-interface AttendanceResult { studentName: string; time: string; }
+type ScanStatus = "idle" | "success" | "punch_out" | "already_marked" | "not_found" | "error";
+interface AttendanceResult { studentName: string; time: string; type: "PUNCH_IN" | "PUNCH_OUT"; }
 
 const SCANNER_ID = "qr-reader";
 const COOLDOWN_MS = 3000;
@@ -77,7 +77,11 @@ export default function ScanPage() {
         body: JSON.stringify({ qrCode: decodedText }),
       });
       const data = await res.json();
-      if (res.ok) { setResult({ studentName: data.studentName, time: data.time ?? new Date().toLocaleTimeString() }); setStatus("success"); }
+      if (res.ok) {
+        const type: "PUNCH_IN" | "PUNCH_OUT" = data.type === "PUNCH_OUT" ? "PUNCH_OUT" : "PUNCH_IN";
+        setResult({ studentName: data.studentName, time: data.time ?? new Date().toLocaleTimeString(), type });
+        setStatus(type === "PUNCH_OUT" ? "punch_out" : "success");
+      }
       else if (res.status === 409) { setStatus("already_marked"); setErrorMsg(data.message ?? "Already marked."); }
       else if (res.status === 404) { setStatus("not_found"); setErrorMsg("Student not found."); }
       else { setStatus("error"); setErrorMsg(data.message ?? "Something went wrong."); }
@@ -87,6 +91,7 @@ export default function ScanPage() {
 
   const borderColor =
     status === "success" ? "#16A34A" :
+    status === "punch_out" ? "#2563EB" :
     status === "already_marked" ? "#D97706" :
     status === "not_found" || status === "error" ? "#DC2626" :
     "#4F46E5";
@@ -170,6 +175,7 @@ export default function ScanPage() {
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               background:
                 status === "success" ? "rgba(240,253,244,0.97)" :
+                status === "punch_out" ? "rgba(239,246,255,0.97)" :
                 status === "already_marked" ? "rgba(255,251,235,0.97)" :
                 "rgba(254,242,242,0.97)",
               borderRadius: 18,
@@ -204,6 +210,26 @@ export default function ScanPage() {
                     <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "6px 16px" }}>
                       <div style={{ color: "#4338CA", fontSize: 11, fontWeight: 700 }}>🏆 Aim for Rank 1!</div>
                     </div>
+                  </div>
+                </>
+              )}
+
+              {status === "punch_out" && result && (
+                <>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#DBEAFE", border: "2px solid #2563EB", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  </div>
+                  <span style={{ color: "#1D4ED8", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "block" }}>Punched Out</span>
+                  <p style={{ color: "#111827", fontWeight: 800, fontSize: "clamp(18px,3.5vw,26px)", margin: "0 0 4px" }}>{result.studentName}</p>
+                  <p style={{ color: "#6B7280", fontSize: 14, margin: "0 0 16px" }}>
+                    Checked out at <span style={{ color: "#1D4ED8", fontWeight: 700 }}>{result.time}</span>
+                  </p>
+                  <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "6px 16px" }}>
+                    <div style={{ color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>See you tomorrow! 👋</div>
                   </div>
                 </>
               )}

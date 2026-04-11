@@ -6,6 +6,7 @@ import morgan from "morgan";
 
 import attendanceRouter from "./routes/attendance.routes.js";
 import authRouter from "./routes/auth.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 
 const app = express();
 const PORT = process.env["PORT"] ?? 4000;
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRouter);
 app.use("/api/attendance", attendanceRouter);
+app.use("/api/admin", adminRouter);
 
 // Global JSON error handler — always return JSON, never HTML
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

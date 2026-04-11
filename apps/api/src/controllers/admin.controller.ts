@@ -1,0 +1,102 @@
+import type { Request, Response } from "express";
+import { prisma } from "../lib/prisma.js";
+
+export async function listStudents(req: Request, res: Response): Promise<void> {
+  const students = await prisma.student.findMany({
+    include: { parent: true },
+    orderBy: { name: "asc" },
+  });
+  res.json(students);
+}
+
+export async function createStudent(req: Request, res: Response): Promise<void> {
+  const { name, enrollmentNo, batch, parentPhone, parentName } = req.body as {
+    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string;
+  };
+
+  if (!name || !enrollmentNo || !batch || !parentPhone) {
+    res.status(400).json({ message: "name, enrollmentNo, batch, parentPhone are required." });
+    return;
+  }
+
+  let parent = await prisma.parent.findFirst({ where: { phone: parentPhone } });
+  if (!parent) {
+    parent = await prisma.parent.create({
+      data: { name: parentName || "Parent", phone: parentPhone },
+    });
+  }
+
+  const student = await prisma.student.create({
+    data: {
+      userId: enrollmentNo,
+      enrollmentNo,
+      name,
+      batch,
+      qrCode: `temp-${Date.now()}`,
+      parentId: parent.id,
+    },
+  });
+
+  const updated = await prisma.student.update({
+    where: { id: student.id },
+    data: { qrCode: `${student.id}:${enrollmentNo}`, qrCodeGenerated: true },
+    include: { parent: true },
+  });
+
+  res.status(201).json(updated);
+}
+
+export async function todayAttendance(req: Request, res: Response): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const records = await prisma.attendance.findMany({
+    where: { date: today },
+    include: { student: { include: { parent: true } } },
+    orderBy: { markedAt: "asc" },
+  });
+  res.json(records);
+}
+
+export async function batchAttendance(req: Request, res: Response): Promise<void> {
+  const batch = req.query["batch"] as string | undefined;
+  const today = new Date().toISOString().slice(0, 10);
+  const records = await prisma.attendance.findMany({
+    where: batch ? { date: today, student: { batch } } : { date: today },
+    include: { student: { include: { parent: true } } },
+    orderBy: { markedAt: "asc" },
+  });
+  res.json(records);
+}
+
+export async function searchStudents(req: Request, res: Response): Promise<void> {
+  const q = req.query["q"] as string | undefined;
+  if (!q) { res.json([]); return; }
+  const students = await prisma.student.findMany({
+    where: {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { enrollmentNo: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    include: { parent: true },
+    take: 20,
+  });
+  res.json(students);
+}
+
+export async function getStudentAttendanceHistory(req: Request, res: Response): Promise<void> {
+  const studentId = req.params["studentId"] as string;
+  const records = await prisma.attendance.findMany({
+    where: { studentId },
+    orderBy: { markedAt: "desc" },
+    take: 60,
+  });
+  res.json(records);
+}
+
+export async function getAllStudents(req: Request, res: Response): Promise<void> {
+  const students = await prisma.student.findMany({
+    include: { parent: true },
+    orderBy: { name: "asc" },
+  });
+  res.json(students);
+}

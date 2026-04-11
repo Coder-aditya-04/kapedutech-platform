@@ -10,9 +10,7 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // QR data format: "<studentId>:<enrollmentNo>"
   const [studentId] = qrCode.split(":");
-
   if (!studentId) {
     res.status(400).json({ message: "Invalid QR code format." });
     return;
@@ -28,43 +26,66 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
+  const studentName = student.name || student.enrollmentNo;
+  const time = new Date().toLocaleTimeString("en-IN", {
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
 
-  const existing = await prisma.attendance.findFirst({
+  const todayRecords = await prisma.attendance.findMany({
     where: { studentId: student.id, date: today },
   });
 
-  if (existing) {
-    res.status(409).json({ message: "Attendance already marked for today." });
+  const hasPunchIn = todayRecords.some(r => r.type === "PUNCH_IN");
+  const hasPunchOut = todayRecords.some(r => r.type === "PUNCH_OUT");
+
+  if (hasPunchIn && hasPunchOut) {
+    res.status(409).json({ message: "Already completed attendance for today." });
     return;
   }
 
-  const time = new Date().toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  const studentName = student.name || student.enrollmentNo;
+  const type = hasPunchIn ? "PUNCH_OUT" : "PUNCH_IN";
 
   const record = await prisma.attendance.create({
-    data: {
-      studentId: student.id,
-      date: today,
-      notificationSent: false,
-    },
+    data: { studentId: student.id, date: today, type, notificationSent: false },
   });
 
-  await sendPushNotification(student.parent.pushToken ?? null, studentName, time);
-  await prisma.attendance.update({
-    where: { id: record.id },
-    data: { notificationSent: true },
-  });
-  console.log(`Push notification sent to parent of ${studentName}`);
+  const notifTitle = type === "PUNCH_IN" ? "Attendance Marked" : "Punch Out";
+  const notifBody = type === "PUNCH_IN"
+    ? `${studentName} punched in at ${time}`
+    : `${studentName} punched out at ${time}`;
 
-  res.status(200).json({
-    success: true,
-    studentName,
-    time,
+  await sendPushNotification(student.parent.pushToken ?? null, notifTitle, notifBody);
+  await prisma.attendance.update({ where: { id: record.id }, data: { notificationSent: true } });
+
+  console.log(`[${type}] ${studentName} at ${time}`);
+  res.status(200).json({ success: true, studentName, time, type });
+}
+
+export async function getStudentAttendance(req: Request, res: Response): Promise<void> {
+  const studentId = req.params["studentId"] as string;
+  const records = await prisma.attendance.findMany({
+    where: { studentId },
+    orderBy: { markedAt: "desc" },
+    take: 30,
+  });
+  res.json(records);
+}
+
+export async function getStudentTodayAttendance(req: Request, res: Response): Promise<void> {
+  const studentId = req.params["studentId"] as string;
+  const today = new Date().toISOString().slice(0, 10);
+  const records = await prisma.attendance.findMany({
+    where: { studentId, date: today },
+  });
+  const punchIn = records.find(r => r.type === "PUNCH_IN");
+  const punchOut = records.find(r => r.type === "PUNCH_OUT");
+  res.json({
+    punchIn: punchIn
+      ? new Date(punchIn.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+      : null,
+    punchOut: punchOut
+      ? new Date(punchOut.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+      : null,
   });
 }
