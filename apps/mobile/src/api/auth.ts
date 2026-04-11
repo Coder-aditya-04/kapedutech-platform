@@ -1,5 +1,5 @@
-const BASE_URL = "https://kapedutech-api-production.up.railway.app/api/auth";
-const ATTENDANCE_URL = "https://kapedutech-api-production.up.railway.app/api/attendance";
+const BASE_URL = "https://kapedutech-platform.onrender.com/api/auth";
+const ATTENDANCE_URL = "https://kapedutech-platform.onrender.com/api/attendance";
 
 export type AttendanceRecord = {
   id: string;
