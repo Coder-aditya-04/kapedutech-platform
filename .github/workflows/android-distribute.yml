@@ -56,7 +56,7 @@ jobs:
 
       - name: Pin Gradle to 8.10.2
         run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.10.2-all.zip|' apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-all.zip|' apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
           cat apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Build debug APK
