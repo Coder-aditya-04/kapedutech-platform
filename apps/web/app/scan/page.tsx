@@ -115,11 +115,15 @@ export default function ScanPage() {
           display: "flex", alignItems: "center", gap: 16,
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         }}>
-          <Image src="/kap_fav.png" alt="Kap EduTech" width={140} height={46} priority
+          <Image src="/kap_fav.png" alt="KAP Edutech" width={140} height={46} priority
             style={{ height: "clamp(32px,5vh,44px)", width: "auto", objectFit: "contain" }} />
           <div style={{ width: 1, height: 36, background: "#E5E7EB" }} />
           <div>
-            <div style={{ color: "#111827", fontWeight: 700, fontSize: "clamp(14px,2vw,16px)" }}>
+            <div style={{ fontSize: "clamp(14px,2vw,16px)" }}>
+              <span style={{ fontWeight: 900, color: "#111827", letterSpacing: 0.5 }}>KAP</span>
+              <span style={{ fontWeight: 400, color: "#4A6FA5" }}> Edutech</span>
+            </div>
+            <div style={{ fontSize: "clamp(10px,1.2vw,12px)", color: "#6B7280", marginTop: 1 }}>
               Attendance System
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 4 }}>

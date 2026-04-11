@@ -40,7 +40,10 @@ export default function AdminLoginPage() {
           <div style={{ width: 72, height: 72, borderRadius: 20, background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.25)", marginBottom: 16 }}>
             <Image src="/kap_fav.png" alt="KAP" width={52} height={52} style={{ objectFit: "contain" }} />
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>KapEduTech</div>
+          <div style={{ fontSize: 26, letterSpacing: 0 }}>
+            <span style={{ fontWeight: 900, color: "#fff", letterSpacing: 1 }}>KAP</span>
+            <span style={{ fontWeight: 300, color: "rgba(255,255,255,0.8)" }}> Edutech</span>
+          </div>
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>Admin Portal — Sign in to continue</div>
         </div>
 
@@ -84,7 +87,7 @@ export default function AdminLoginPage() {
           </form>
         </div>
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
-          KapEduTech Attendance System © 2026
+          KAP Edutech Attendance System © 2026
         </div>
       </div>
     </main>

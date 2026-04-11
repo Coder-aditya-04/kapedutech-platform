@@ -130,7 +130,10 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.brandName}>Kap EduTech</Text>
+          <Text style={styles.brandName}>
+            <Text style={styles.brandKAP}>KAP </Text>
+            <Text style={styles.brandEdutech}>Edutech</Text>
+          </Text>
           <Text style={styles.brandSub}>Parent Attendance Portal</Text>
           <View style={styles.tagRow}>
             <View style={[styles.tag, { backgroundColor: "#FFF3E0", borderColor: "#FFB300" }]}>
@@ -235,7 +238,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.footer}>
-          Secure login powered by Kap EduTech
+          Secure login powered by KAP Edutech
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -258,6 +261,8 @@ const styles = StyleSheet.create({
   },
   logo: { width: 56, height: 56 },
   brandName: { fontSize: 24, fontWeight: "800", color: "#1A1A2E", letterSpacing: 0.3 },
+  brandKAP: { fontSize: 26, fontWeight: "900", color: "#1A1A2E", letterSpacing: 1 },
+  brandEdutech: { fontSize: 22, fontWeight: "400", color: "#4A6FA5" },
   brandSub: { fontSize: 13, color: "#757575", marginTop: 4 },
   tagRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   tag: {

@@ -87,7 +87,7 @@ export default function ProfileScreen() {
           />
           <Divider />
           <List.Item
-            title="KapEduTech Platform"
+            title="KAP Edutech Platform"
             description="Attendance Management System"
             left={props => <List.Icon {...props} icon="school" color="#6B7280" />}
             titleStyle={styles.listTitle}

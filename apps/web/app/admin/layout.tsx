@@ -79,7 +79,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Image src="/kap_fav.png" alt="KAP" width={32} height={32} style={{ objectFit: "contain" }} />
             </div>
             <div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>KapEduTech</div>
+              <div>
+                <span style={{ fontSize: 17, fontWeight: 900, color: "#fff", letterSpacing: 0.5 }}>KAP</span>
+                <span style={{ fontSize: 17, fontWeight: 400, color: "rgba(255,255,255,0.75)" }}> Edutech</span>
+              </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>Admin Portal</div>
             </div>
           </div>
