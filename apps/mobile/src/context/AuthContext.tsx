@@ -1,26 +1,42 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthContextType = {
   phone: string | null;
+  isLoading: boolean;
   login: (phone: string) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
   phone: null,
+  isLoading: true,
   login: () => {},
   logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [phone, setPhone] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem("auth_token").then((token) => {
+      if (token) AsyncStorage.getItem("parent").then((raw) => {
+        if (raw) {
+          const parent = JSON.parse(raw);
+          setPhone(parent.phone ?? null);
+        }
+      });
+    }).finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         phone,
+        isLoading,
         login: (p) => setPhone(p),
-        logout: () => setPhone(null),
+        logout: () => { setPhone(null); AsyncStorage.multiRemove(["auth_token", "parent"]); },
       }}
     >
       {children}
