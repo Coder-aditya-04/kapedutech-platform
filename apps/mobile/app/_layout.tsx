@@ -2,6 +2,11 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { PaperProvider, MD3LightTheme } from "react-native-paper";
 import { AuthProvider } from "@/src/context/AuthContext";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
+
+// Keep splash visible until we explicitly hide it
+SplashScreen.preventAutoHideAsync();
 
 const theme = {
   ...MD3LightTheme,
@@ -13,6 +18,11 @@ const theme = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Hide splash screen as soon as the layout mounts
+    SplashScreen.hideAsync();
+  }, []);
+
   return (
     <AuthProvider>
       <PaperProvider theme={theme}>
@@ -20,6 +30,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: "modal", headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </PaperProvider>
