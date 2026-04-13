@@ -81,21 +81,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }}>
 
         {/* Logo */}
-        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #DEE3E9" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ padding: "18px 16px", borderBottom: "1px solid #DEE3E9" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "#F1F4F7", border: "1px solid #DEE3E9",
+              width: 44, height: 44, borderRadius: 12,
+              background: "#E8F3FF",
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              boxShadow: "0 2px 8px rgba(0,100,224,0.12)",
             }}>
-              <Image src="/kap_fav.png" alt="KAP" width={26} height={26} style={{ objectFit: "contain" }} />
+              <Image src="/kap_fav.png" alt="KAP" width={34} height={34} style={{ objectFit: "contain" }} />
             </div>
             <div>
               <div style={{ lineHeight: 1.2 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: "#1C2B33", letterSpacing: -0.2 }}>KAP</span>
-                <span style={{ fontSize: 16, fontWeight: 400, color: "#5D6C7B" }}> Edutech</span>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#1C2B33", letterSpacing: -0.3 }}>KAP</span>
+                <span style={{ fontSize: 17, fontWeight: 400, color: "#0064E0" }}> Edutech</span>
               </div>
-              <div style={{ fontSize: 11, color: "#BCC0C4", marginTop: 2 }}>Admin Portal</div>
+              <div style={{ fontSize: 11, color: "#BCC0C4", marginTop: 2, letterSpacing: 0.3 }}>Admin Portal</div>
             </div>
           </div>
         </div>

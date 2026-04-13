@@ -182,7 +182,7 @@ export default function StudentsPage() {
                   <td style={{ padding: "13px 18px", fontWeight: 600, color: "#111827" }}>{s.name}</td>
                   <td style={{ padding: "13px 18px", color: "#6B7280", fontFamily: "monospace", fontSize: 13 }}>{s.enrollmentNo}</td>
                   <td style={{ padding: "13px 18px" }}>
-                    <span style={{ background: s.batch === "JEE" ? "#EEF2FF" : "#FDF4FF", color: s.batch === "JEE" ? "#4F46E5" : "#7C3AED", borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700 }}>{s.batch || "—"}</span>
+                    <span style={{ background: s.batch === "JEE" ? "#0064E0" : "#6441D2", color: "#fff", borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, display: "inline-block" }}>{s.batch || "—"}</span>
                   </td>
                   <td style={{ padding: "13px 18px", color: "#374151" }}>{s.parent?.name ?? "—"}</td>
                   <td style={{ padding: "13px 18px", color: "#6B7280", fontFamily: "monospace", fontSize: 13 }}>{s.parent?.phone ?? "—"}</td>

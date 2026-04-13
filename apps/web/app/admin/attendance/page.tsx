@@ -119,11 +119,11 @@ export default function AttendancePage() {
         <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
           {BATCHES.map(b => (
             <button key={b} onClick={() => setBatch(b)} style={{
-              padding: "7px 16px", borderRadius: 20, border: "1.5px solid",
-              borderColor: batch === b ? "#4F46E5" : "#E5E7EB",
-              background: batch === b ? "#EEF2FF" : "#fff",
-              color: batch === b ? "#4F46E5" : "#6B7280",
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              padding: "6px 16px", borderRadius: 100, border: "none",
+              background: batch === b ? "#0064E0" : "#F1F4F7",
+              color: batch === b ? "#fff" : "#5D6C7B",
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.15s",
             }}>{b}</button>
           ))}
         </div>
@@ -155,7 +155,7 @@ export default function AttendancePage() {
                     <td style={{ padding: "13px 18px", fontWeight: 600, color: "#111827" }}>{s.student.name}</td>
                     <td style={{ padding: "13px 18px", color: "#6B7280", fontFamily: "monospace", fontSize: 13 }}>{s.student.enrollmentNo}</td>
                     <td style={{ padding: "13px 18px" }}>
-                      <span style={{ background: s.student.batch === "JEE" ? "#EEF2FF" : "#FDF4FF", color: s.student.batch === "JEE" ? "#4F46E5" : "#7C3AED", borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700 }}>{s.student.batch || "—"}</span>
+                      <span style={{ background: s.student.batch === "JEE" ? "#0064E0" : "#6441D2", color: "#fff", borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, display: "inline-block" }}>{s.student.batch || "—"}</span>
                     </td>
                     <td style={{ padding: "13px 18px", color: s.punchIn ? "#059669" : "#9CA3AF", fontWeight: s.punchIn ? 600 : 400 }}>{s.punchIn ?? "—"}</td>
                     <td style={{ padding: "13px 18px", color: s.punchOut ? "#2563EB" : "#9CA3AF", fontWeight: s.punchOut ? 600 : 400 }}>{s.punchOut ?? "—"}</td>

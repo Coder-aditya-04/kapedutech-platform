@@ -133,11 +133,11 @@ export default function DashboardPage() {
           <div style={{ display: "flex", gap: 6 }}>
             {BATCHES.map(b => (
               <button key={b} onClick={() => setBatch(b)} style={{
-                padding: "5px 14px",
+                padding: "5px 16px",
                 borderRadius: 100,
-                border: `1.5px solid ${batch === b ? "#0064E0" : "#DEE3E9"}`,
-                background: batch === b ? "#E8F3FF" : "#fff",
-                color: batch === b ? "#0064E0" : "#5D6C7B",
+                border: "none",
+                background: batch === b ? "#0064E0" : "#F1F4F7",
+                color: batch === b ? "#fff" : "#5D6C7B",
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 0.15s",
               }}>{b}</button>
@@ -179,9 +179,10 @@ export default function DashboardPage() {
                     <td style={{ padding: "13px 20px", color: "#5D6C7B", fontFamily: "monospace", fontSize: 13 }}>{s.student.enrollmentNo}</td>
                     <td style={{ padding: "13px 20px" }}>
                       <span style={{
-                        background: s.student.batch === "JEE" ? "#EEF4FF" : "#F3EEFF",
-                        color: s.student.batch === "JEE" ? "#1877F2" : "#6441D2",
-                        borderRadius: 100, padding: "3px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
+                        background: s.student.batch === "JEE" ? "#0064E0" : "#6441D2",
+                        color: "#fff",
+                        borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                        display: "inline-block",
                       }}>{s.student.batch || "—"}</span>
                     </td>
                     <td style={{ padding: "13px 20px", color: s.punchIn ? "#007D1E" : "#BCC0C4", fontWeight: s.punchIn ? 600 : 400 }}>{s.punchIn ?? "—"}</td>

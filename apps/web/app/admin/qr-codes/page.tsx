@@ -27,12 +27,17 @@ function QRCard({ student }: { student: Student }) {
   return (
     <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column" }}>
       {/* Card header */}
-      <div style={{ background: "linear-gradient(135deg, #1E1B4B, #4338CA)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ background: "#1C2B33", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{student.name}</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2, fontFamily: "monospace" }}>{student.enrollmentNo}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2, fontFamily: "monospace" }}>{student.enrollmentNo}</div>
         </div>
-        <span style={{ background: student.batch === "JEE" ? "rgba(165,180,252,0.25)" : "rgba(216,180,254,0.25)", color: student.batch === "JEE" ? "#A5B4FC" : "#D8B4FE", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 700 }}>
+        <span style={{
+          background: student.batch === "JEE" ? "#0064E0" : "#6441D2",
+          color: "#fff", borderRadius: 100,
+          padding: "3px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
+          display: "inline-block",
+        }}>
           {student.batch || "—"}
         </span>
       </div>
@@ -132,11 +137,11 @@ export default function QRCodesPage() {
         <div style={{ display: "flex", gap: 6 }}>
           {BATCHES.map(b => (
             <button key={b} onClick={() => setBatch(b)} style={{
-              padding: "6px 16px", borderRadius: 100, border: "1.5px solid",
-              borderColor: batch === b ? "#0064E0" : "#DEE3E9",
-              background: batch === b ? "#E8F3FF" : "#fff",
-              color: batch === b ? "#0064E0" : "#5D6C7B",
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              padding: "6px 16px", borderRadius: 100, border: "none",
+              background: batch === b ? "#0064E0" : "#F1F4F7",
+              color: batch === b ? "#fff" : "#5D6C7B",
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.15s",
             }}>{b}</button>
           ))}
         </div>
