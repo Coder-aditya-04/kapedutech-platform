@@ -87,8 +87,8 @@ export default function AttendancePage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: 0, letterSpacing: -0.5 }}>Attendance</h1>
-          <p style={{ color: "#6B7280", marginTop: 4, fontSize: 14 }}>{displayDate}</p>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: "#1C2B33", margin: 0, letterSpacing: -0.3 }}>Attendance</h1>
+          <p style={{ color: "#5D6C7B", marginTop: 4, fontSize: 14 }}>{displayDate}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <input
@@ -96,11 +96,11 @@ export default function AttendancePage() {
             value={date}
             max={today}
             onChange={e => setDate(e.target.value)}
-            style={{ padding: "8px 12px", border: "1px solid #E5E7EB", borderRadius: 10, fontSize: 14, outline: "none", color: "#111827", background: "#fff", cursor: "pointer" }}
+            style={{ padding: "8px 12px", border: "1px solid #CED0D4", borderRadius: 8, fontSize: 14, outline: "none", color: "#1C2B33", background: "#fff", cursor: "pointer" }}
           />
           <button
             onClick={() => exportCSV(summaries, date)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", border: "1px solid #CED0D4", borderRadius: 100, background: "#fff", color: "#1C2B33", fontSize: 13, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.06)" }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
