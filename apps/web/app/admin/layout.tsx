@@ -81,24 +81,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }}>
 
         {/* Logo */}
-        <div style={{ padding: "18px 16px", borderBottom: "1px solid #DEE3E9" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12,
-              background: "#E8F3FF",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(0,100,224,0.12)",
-            }}>
-              <Image src="/kap_fav.png" alt="KAP" width={34} height={34} style={{ objectFit: "contain" }} />
-            </div>
-            <div>
-              <div style={{ lineHeight: 1.2 }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: "#1C2B33", letterSpacing: -0.3 }}>KAP</span>
-                <span style={{ fontSize: 17, fontWeight: 400, color: "#0064E0" }}> Edutech</span>
-              </div>
-              <div style={{ fontSize: 11, color: "#BCC0C4", marginTop: 2, letterSpacing: 0.3 }}>Admin Portal</div>
-            </div>
-          </div>
+        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #DEE3E9", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <Image src="/kap_fav.png" alt="KAP Edutech" width={160} height={52} style={{ objectFit: "contain", width: "100%", height: "auto", maxHeight: 56 }} priority />
+          <span style={{ fontSize: 10, fontWeight: 600, color: "#BCC0C4", letterSpacing: 1.5, textTransform: "uppercase" }}>Admin Portal</span>
         </div>
 
         {/* Nav */}
