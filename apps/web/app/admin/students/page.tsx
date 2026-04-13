@@ -23,6 +23,11 @@ export default function StudentsPage() {
   const [form, setForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
+  const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async (q?: string) => {
     try {
@@ -36,6 +41,11 @@ export default function StudentsPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { const t = setTimeout(() => load(search || undefined), 300); return () => clearTimeout(t); }, [search, load]);
 
+  function showToast(msg: string, ok: boolean) {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -45,20 +55,73 @@ export default function StudentsPage() {
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        setToast({ msg: "Student added successfully!", ok: true });
+        showToast("Student added successfully!", true);
         setShowModal(false);
         setForm({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
         load();
       } else {
         const d = await res.json();
-        setToast({ msg: d.message ?? "Failed to add student", ok: false });
+        showToast(d.message ?? "Failed to add student", false);
       }
     } catch {
-      setToast({ msg: "Network error", ok: false });
+      showToast("Network error", false);
     }
     setSubmitting(false);
-    setTimeout(() => setToast(null), 3000);
   }
+
+  function openEdit(s: Student) {
+    setEditStudent(s);
+    setEditForm({ name: s.name, enrollmentNo: s.enrollmentNo, batch: s.batch || "JEE", parentName: s.parent?.name ?? "", parentPhone: s.parent?.phone ?? "" });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editStudent) return;
+    setEditing(true);
+    try {
+      const res = await fetch(`/api/admin/students/${editStudent.id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        showToast("Student updated", true);
+        setEditStudent(null);
+        load();
+      } else {
+        const d = await res.json();
+        showToast(d.message ?? "Failed to update student", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    }
+    setEditing(false);
+  }
+
+  async function handleDelete() {
+    if (!deleteStudent) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/students/${deleteStudent.id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Student deleted", false);
+        setDeleteStudent(null);
+        load();
+      } else {
+        const d = await res.json();
+        showToast(d.message ?? "Failed to delete student", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    }
+    setDeleting(false);
+  }
+
+  const fieldList = [
+    { label: "Student Name", key: "name", type: "text", placeholder: "Full name" },
+    { label: "Enrollment No", key: "enrollmentNo", type: "text", placeholder: "e.g. JEE2026-001" },
+    { label: "Parent Name", key: "parentName", type: "text", placeholder: "Parent full name" },
+    { label: "Parent Phone", key: "parentPhone", type: "tel", placeholder: "10 digit mobile number" },
+  ];
 
   return (
     <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
@@ -104,16 +167,16 @@ export default function StudentsPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                {["Name", "Enrollment No", "Batch", "Parent Name", "Parent Phone"].map(h => (
+                {["Name", "Enrollment No", "Batch", "Parent Name", "Parent Phone", "Actions"].map(h => (
                   <th key={h} style={{ padding: "11px 18px", textAlign: "left", color: "#9CA3AF", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.7 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>Loading...</td></tr>
+                <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>Loading...</td></tr>
               ) : students.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>No students found</td></tr>
+                <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>No students found</td></tr>
               ) : students.map(s => (
                 <tr key={s.id} style={{ borderTop: "1px solid #F3F4F6" }}>
                   <td style={{ padding: "13px 18px", fontWeight: 600, color: "#111827" }}>{s.name}</td>
@@ -123,6 +186,32 @@ export default function StudentsPage() {
                   </td>
                   <td style={{ padding: "13px 18px", color: "#374151" }}>{s.parent?.name ?? "—"}</td>
                   <td style={{ padding: "13px 18px", color: "#6B7280", fontFamily: "monospace", fontSize: 13 }}>{s.parent?.phone ?? "—"}</td>
+                  <td style={{ padding: "13px 18px" }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <button
+                        onClick={() => openEdit(s)}
+                        title="Edit student"
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, border: "1px solid #E5E7EB", borderRadius: 8, background: "#fff", color: "#4F46E5", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setDeleteStudent(s)}
+                        title="Delete student"
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, border: "1px solid #FCA5A5", borderRadius: 8, background: "#FFF5F5", color: "#DC2626", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                          <path d="M10 11v6"/><path d="M14 11v6"/>
+                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -130,7 +219,7 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Add Student Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(2px)" }}>
           <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", margin: 16 }}>
@@ -139,12 +228,7 @@ export default function StudentsPage() {
               <button onClick={() => setShowModal(false)} style={{ border: "none", background: "#F3F4F6", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✕</button>
             </div>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[
-                { label: "Student Name", key: "name", type: "text", placeholder: "Full name" },
-                { label: "Enrollment No", key: "enrollmentNo", type: "text", placeholder: "e.g. JEE2026-001" },
-                { label: "Parent Name", key: "parentName", type: "text", placeholder: "Parent full name" },
-                { label: "Parent Phone", key: "parentPhone", type: "tel", placeholder: "10 digit mobile number" },
-              ].map(f => (
+              {fieldList.map(f => (
                 <div key={f.key}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>{f.label}</label>
                   <input
@@ -170,6 +254,66 @@ export default function StudentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editStudent && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(2px)" }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", margin: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Edit Student</h2>
+              <button onClick={() => setEditStudent(null)} style={{ border: "none", background: "#F3F4F6", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✕</button>
+            </div>
+            <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {fieldList.map(f => (
+                <div key={f.key}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>{f.label}</label>
+                  <input
+                    type={f.type} placeholder={f.placeholder} required
+                    value={(editForm as Record<string, string>)[f.key]}
+                    onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", outline: "none", color: "#111827", background: "#fff" }}
+                  />
+                </div>
+              ))}
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 }}>Batch</label>
+                <select value={editForm.batch} onChange={e => setEditForm(prev => ({ ...prev, batch: e.target.value }))}
+                  style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", outline: "none", color: "#111827", background: "#fff" }}>
+                  <option value="JEE">JEE</option>
+                  <option value="NEET">NEET</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                <button type="button" onClick={() => setEditStudent(null)} style={{ flex: 1, padding: "10px", border: "1.5px solid #E5E7EB", borderRadius: 10, background: "#fff", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                <button type="submit" disabled={editing} style={{ flex: 1, padding: "10px", border: "none", borderRadius: 10, background: "linear-gradient(135deg,#4F46E5,#7C3AED)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: editing ? "not-allowed" : "pointer", opacity: editing ? 0.7 : 1 }}>
+                  {editing ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteStudent && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(2px)" }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", margin: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Delete Student</h2>
+              <button onClick={() => setDeleteStudent(null)} style={{ border: "none", background: "#F3F4F6", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✕</button>
+            </div>
+            <p style={{ color: "#374151", fontSize: 14, margin: "0 0 24px 0", lineHeight: 1.6 }}>
+              Delete <strong>{deleteStudent.name}</strong>? This will remove all their attendance records.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button type="button" onClick={() => setDeleteStudent(null)} style={{ flex: 1, padding: "10px", border: "1.5px solid #E5E7EB", borderRadius: 10, background: "#fff", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: "10px", border: "none", borderRadius: 10, background: deleting ? "#FCA5A5" : "#DC2626", color: "#fff", fontSize: 14, fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer" }}>
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

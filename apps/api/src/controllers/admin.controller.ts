@@ -100,3 +100,48 @@ export async function getAllStudents(req: Request, res: Response): Promise<void>
   });
   res.json(students);
 }
+
+export async function updateStudent(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { name, enrollmentNo, batch, parentPhone, parentName } = req.body as {
+    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string;
+  };
+
+  if (!name || !enrollmentNo || !batch || !parentPhone) {
+    res.status(400).json({ message: "name, enrollmentNo, batch, parentPhone are required." });
+    return;
+  }
+
+  let parent = await prisma.parent.findFirst({ where: { phone: parentPhone } });
+  if (!parent) {
+    parent = await prisma.parent.create({ data: { name: parentName || "Parent", phone: parentPhone } });
+  } else if (parentName) {
+    parent = await prisma.parent.update({ where: { id: parent.id }, data: { name: parentName } });
+  }
+
+  const updated = await prisma.student.update({
+    where: { id },
+    data: { name, enrollmentNo, batch, parentId: parent.id },
+    include: { parent: true },
+  });
+  res.json(updated);
+}
+
+export async function deleteStudent(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  await prisma.attendance.deleteMany({ where: { studentId: id } });
+  await prisma.student.delete({ where: { id } });
+  res.json({ message: "Student deleted" });
+}
+
+export async function dateAttendance(req: Request, res: Response): Promise<void> {
+  const date = req.query["date"] as string | undefined;
+  const batch = req.query["batch"] as string | undefined;
+  if (!date) { res.status(400).json({ message: "date query param required" }); return; }
+  const records = await prisma.attendance.findMany({
+    where: batch ? { date, student: { batch } } : { date },
+    include: { student: { include: { parent: true } } },
+    orderBy: { markedAt: "asc" },
+  });
+  res.json(records);
+}

@@ -35,16 +35,19 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [batch, setBatch] = useState("All");
   const today = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(today);
 
   const load = useCallback(async () => {
     try {
-      const url = batch === "All" ? "/api/admin/attendance/today" : `/api/admin/attendance/batch?batch=${batch}`;
+      const url = date === today
+        ? (batch === "All" ? "/api/admin/attendance/today" : `/api/admin/attendance/batch?batch=${batch}`)
+        : `/api/admin/attendance/date?date=${date}${batch !== "All" ? `&batch=${batch}` : ""}`;
       const [recRes, stuRes] = await Promise.all([fetch(url), fetch("/api/admin/students")]);
       setRecords(recRes.ok ? await recRes.json() : []);
       setAllStudents(stuRes.ok ? await stuRes.json() : []);
     } catch {}
     setLoading(false);
-  }, [batch]);
+  }, [batch, date, today]);
 
   useEffect(() => { setLoading(true); load(); }, [load]);
 
@@ -57,9 +60,18 @@ export default function AttendancePage() {
     if (r.type === "PUNCH_IN") { s.punchIn = time; s.punchInMs = ms; }
     if (r.type === "PUNCH_OUT") { s.punchOut = time; s.punchOutMs = ms; }
   });
+
+  // Add absent students (those with no records for the selected date)
+  const batchFiltered = batch === "All" ? allStudents : allStudents.filter(s => s.batch === batch);
+  batchFiltered.forEach(s => {
+    if (!summaryMap.has(s.id)) {
+      summaryMap.set(s.id, { student: s, punchIn: null, punchOut: null, punchInMs: null, punchOutMs: null });
+    }
+  });
+
   const summaries = Array.from(summaryMap.values());
-  const presentCount = summaries.length;
-  const totalCount = batch === "All" ? allStudents.length : allStudents.filter(s => s.batch === batch).length;
+  const presentCount = summaries.filter(s => s.punchIn !== null).length;
+  const totalCount = batchFiltered.length;
   const absentCount = Math.max(0, totalCount - presentCount);
 
   const statCards = [
@@ -68,27 +80,36 @@ export default function AttendancePage() {
     { label: "Total", value: totalCount, color: "#4F46E5", bg: "#EEF2FF", border: "#C7D2FE" },
   ];
 
+  const displayDate = new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
   return (
     <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: 0, letterSpacing: -0.5 }}>Attendance</h1>
-          <p style={{ color: "#6B7280", marginTop: 4, fontSize: 14 }}>
-            Today — {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
-          </p>
+          <p style={{ color: "#6B7280", marginTop: 4, fontSize: 14 }}>{displayDate}</p>
         </div>
-        <button
-          onClick={() => exportCSV(summaries, today)}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export CSV
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="date"
+            value={date}
+            max={today}
+            onChange={e => setDate(e.target.value)}
+            style={{ padding: "8px 12px", border: "1px solid #E5E7EB", borderRadius: 10, fontSize: 14, outline: "none", color: "#111827", background: "#fff", cursor: "pointer" }}
+          />
+          <button
+            onClick={() => exportCSV(summaries, date)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+      {/* Stats + Batch filter */}
+      <div style={{ display: "flex", gap: 14, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
         {statCards.map(s => (
           <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 22px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${s.border}` }}>
             <span style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{loading ? "—" : s.value}</span>
@@ -123,12 +144,12 @@ export default function AttendancePage() {
               {loading ? (
                 <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>Loading...</td></tr>
               ) : summaries.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>No attendance records found</td></tr>
+                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>No records found</td></tr>
               ) : summaries.map(s => {
-                const status = s.punchIn && s.punchOut ? "Complete" : "Partial";
+                const status = s.punchIn && s.punchOut ? "Complete" : s.punchIn ? "Partial" : "Absent";
                 const dur = s.punchInMs && s.punchOutMs ? duration(s.punchInMs, s.punchOutMs) : "—";
-                const statusColor = status === "Complete" ? "#059669" : "#D97706";
-                const statusBg = status === "Complete" ? "#ECFDF5" : "#FFFBEB";
+                const statusColor = status === "Complete" ? "#059669" : status === "Partial" ? "#D97706" : "#DC2626";
+                const statusBg = status === "Complete" ? "#ECFDF5" : status === "Partial" ? "#FFFBEB" : "#FEF2F2";
                 return (
                   <tr key={s.student.id} style={{ borderTop: "1px solid #F3F4F6" }}>
                     <td style={{ padding: "13px 18px", fontWeight: 600, color: "#111827" }}>{s.student.name}</td>

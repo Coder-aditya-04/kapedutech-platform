@@ -20,14 +20,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem("auth_token").then((token) => {
-      if (token) AsyncStorage.getItem("parent").then((raw) => {
-        if (raw) {
-          const parent = JSON.parse(raw);
-          setPhone(parent.phone ?? null);
+    async function restore() {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        if (token) {
+          const raw = await AsyncStorage.getItem("parent");
+          if (raw) {
+            const parent = JSON.parse(raw);
+            setPhone(parent.phone ?? null);
+          }
         }
-      });
-    }).finally(() => setIsLoading(false));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    restore();
   }, []);
 
   return (
