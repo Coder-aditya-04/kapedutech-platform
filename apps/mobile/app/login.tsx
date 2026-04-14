@@ -10,7 +10,7 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useAuth } from "@/src/context/AuthContext";
-import { requestOtpEmail, verifyOtpEmail, savePushToken } from "@/src/api/auth";
+import { requestOtp, verifyOtp, savePushToken } from "@/src/api/auth";
 
 async function registerForPushNotifications(): Promise<string | null> {
   try {
@@ -29,13 +29,13 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
 }
 
-type Step = "email" | "otp";
+type Step = "phone" | "otp";
 const OTP_LENGTH = 6;
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("phone");
+  const [phone, setPhone] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -47,13 +47,13 @@ export default function LoginScreen() {
   }, [step]);
 
   async function handleSendOtp() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email address.");
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Enter a valid 10-digit mobile number.");
       return;
     }
     setError(""); setLoading(true);
     try {
-      await requestOtpEmail(email);
+      await requestOtp(phone);
       setStep("otp");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send OTP.");
@@ -65,10 +65,10 @@ export default function LoginScreen() {
     if (otp.length !== OTP_LENGTH) { setError("Enter the 6-digit OTP."); return; }
     setError(""); setLoading(true);
     try {
-      const { token, parent } = await verifyOtpEmail(email, otp);
+      const { token, parent } = await verifyOtp(phone, otp);
       await AsyncStorage.setItem("auth_token", token);
       await AsyncStorage.setItem("parent", JSON.stringify(parent));
-      login(email);
+      login(phone);
       router.replace("/(tabs)");
       registerForPushNotifications()
         .then((pushToken) => { if (pushToken) savePushToken(parent.id, pushToken); })
@@ -116,7 +116,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — white background so logo blends in */}
+        {/* Header */}
         <View style={styles.header}>
           <Image
             source={require("@/assets/images/kap_logo.png")}
@@ -128,24 +128,28 @@ export default function LoginScreen() {
 
         {/* Card */}
         <View style={styles.card}>
-          {step === "email" ? (
+          {step === "phone" ? (
             <>
               <Text style={styles.cardTitle}>Sign In</Text>
-              <Text style={styles.cardSub}>Enter your registered email address to continue</Text>
+              <Text style={styles.cardSub}>Enter your registered mobile number to continue</Text>
 
-              <Text style={styles.label}>Email Address</Text>
-              <RNTextInput
-                style={styles.emailInput}
-                placeholder="yourname@gmail.com"
-                placeholderTextColor="#BDBDBD"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={email}
-                onChangeText={(t) => { setEmail(t); setError(""); }}
-                returnKeyType="done"
-                onSubmitEditing={handleSendOtp}
-              />
+              <Text style={styles.label}>Mobile Number</Text>
+              <View style={styles.phoneRow}>
+                <View style={styles.countryCode}>
+                  <Text style={styles.countryCodeText}>+91</Text>
+                </View>
+                <RNTextInput
+                  style={styles.phoneInput}
+                  placeholder="9876543210"
+                  placeholderTextColor="#BDBDBD"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={phone}
+                  onChangeText={(t) => { setPhone(t.replace(/\D/g, "")); setError(""); }}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSendOtp}
+                />
+              </View>
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -165,7 +169,7 @@ export default function LoginScreen() {
               <Text style={styles.cardTitle}>Verify OTP</Text>
               <Text style={styles.cardSub}>
                 Enter the 6-digit code sent to{"\n"}
-                <Text style={styles.emailHighlight}>{email}</Text>
+                <Text style={styles.phoneHighlight}>+91 {phone}</Text>
               </Text>
 
               <Text style={styles.label}>One-Time Password</Text>
@@ -200,10 +204,10 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => { setStep("email"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); }}
+                onPress={() => { setStep("phone"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); }}
                 style={styles.secondaryBtn}
               >
-                <Text style={styles.secondaryBtnText}>Change email</Text>
+                <Text style={styles.secondaryBtnText}>Change number</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleSendOtp} style={styles.resendBtn}>
@@ -238,15 +242,21 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 6 },
   cardSub: { fontSize: 14, color: "#757575", marginBottom: 22, lineHeight: 20 },
-  emailHighlight: { color: "#0064E0", fontWeight: "700" },
+  phoneHighlight: { color: "#0064E0", fontWeight: "700" },
   label: { fontSize: 12, fontWeight: "700", color: "#424242", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 },
 
-  emailInput: {
-    width: "100%", fontSize: 15, color: "#111827",
+  phoneRow: { flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 8 },
+  countryCode: {
     paddingHorizontal: 14, paddingVertical: 14,
     borderWidth: 1.5, borderColor: "#E5E7EB",
-    borderRadius: 12, marginBottom: 14,
-    backgroundColor: "#FAFAFA",
+    borderRadius: 12, backgroundColor: "#FAFAFA",
+  },
+  countryCodeText: { fontSize: 15, color: "#111827", fontWeight: "600" },
+  phoneInput: {
+    flex: 1, fontSize: 15, color: "#111827",
+    paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1.5, borderColor: "#E5E7EB",
+    borderRadius: 12, backgroundColor: "#FAFAFA",
   },
 
   otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 8, marginBottom: 16 },
