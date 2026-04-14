@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  Image, TouchableOpacity, TextInput as RNTextInput,
+  TouchableOpacity, TextInput as RNTextInput,
   ScrollView, NativeSyntheticEvent, TextInputKeyPressEventData,
 } from "react-native";
+import { Image } from "expo-image";
 import { Text } from "react-native-paper";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -123,26 +124,12 @@ export default function LoginScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoWrap}>
-            <Image
-              source={require("@/assets/images/kap_logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.brandName}>
-            <Text style={styles.brandKAP}>KAP </Text>
-            <Text style={styles.brandEdutech}>Edutech</Text>
-          </Text>
+          <Image
+            source={require("@/assets/images/kap_logo.png")}
+            style={styles.logo}
+            contentFit="contain"
+          />
           <Text style={styles.brandSub}>Parent Attendance Portal</Text>
-          <View style={styles.tagRow}>
-            <View style={[styles.tag, { backgroundColor: "#FFF3E0", borderColor: "#FFB300" }]}>
-              <Text style={[styles.tagText, { color: "#E65100" }]}>JEE</Text>
-            </View>
-            <View style={[styles.tag, { backgroundColor: "#E8F5E9", borderColor: "#43A047" }]}>
-              <Text style={[styles.tagText, { color: "#2E7D32" }]}>NEET</Text>
-            </View>
-          </View>
         </View>
 
         {/* Card */}
@@ -251,25 +238,8 @@ const styles = StyleSheet.create({
 
   // Header
   header: { alignItems: "center", marginBottom: 28 },
-  logoWrap: {
-    width: 80, height: 80, borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
-    marginBottom: 14,
-  },
-  logo: { width: 56, height: 56 },
-  brandName: { fontSize: 24, fontWeight: "800", color: "#1A1A2E", letterSpacing: 0.3 },
-  brandKAP: { fontSize: 26, fontWeight: "900", color: "#1A1A2E", letterSpacing: 1 },
-  brandEdutech: { fontSize: 22, fontWeight: "400", color: "#4A6FA5" },
+  logo: { width: 200, height: 64, marginBottom: 10 },
   brandSub: { fontSize: 13, color: "#757575", marginTop: 4 },
-  tagRow: { flexDirection: "row", gap: 8, marginTop: 10 },
-  tag: {
-    paddingHorizontal: 14, paddingVertical: 4,
-    borderRadius: 20, borderWidth: 1,
-  },
-  tagText: { fontSize: 11, fontWeight: "800", letterSpacing: 1 },
 
   // Card
   card: {

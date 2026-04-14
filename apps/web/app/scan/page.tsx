@@ -110,33 +110,15 @@ export default function ScanPage() {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%" }}>
         <div style={{
           background: "#FFFFFF",
-          borderRadius: 16, padding: "14px 32px",
+          borderRadius: 16, padding: "12px 28px",
           border: "1px solid #E5E7EB",
-          display: "flex", alignItems: "center", gap: 16,
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
         }}>
-          <Image src="/kap_fav.png" alt="KAP Edutech" width={140} height={46} priority
-            style={{ height: "clamp(32px,5vh,44px)", width: "auto", objectFit: "contain" }} />
-          <div style={{ width: 1, height: 36, background: "#E5E7EB" }} />
-          <div>
-            <div style={{ fontSize: "clamp(14px,2vw,16px)" }}>
-              <span style={{ fontWeight: 900, color: "#111827", letterSpacing: 0.5 }}>KAP</span>
-              <span style={{ fontWeight: 400, color: "#4A6FA5" }}> Edutech</span>
-            </div>
-            <div style={{ fontSize: "clamp(10px,1.2vw,12px)", color: "#6B7280", marginTop: 1 }}>
-              Attendance System
-            </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-              {["JEE", "NEET"].map((tag, i) => (
-                <span key={tag} style={{
-                  fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
-                  letterSpacing: 1,
-                  background: i === 0 ? "#FFF7ED" : "#F0FDF4",
-                  color: i === 0 ? "#C2410C" : "#15803D",
-                  border: `1px solid ${i === 0 ? "#FED7AA" : "#BBF7D0"}`,
-                }}>{tag}</span>
-              ))}
-            </div>
+          <Image src="/kap_fav.png" alt="KAP Edutech" width={180} height={56} priority
+            style={{ height: "clamp(44px,6vh,60px)", width: "auto", objectFit: "contain" }} />
+          <div style={{ fontSize: 10, color: "#9CA3AF", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>
+            Attendance System
           </div>
         </div>
 
