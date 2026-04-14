@@ -105,8 +105,8 @@ export async function getAllStudents(req: Request, res: Response): Promise<void>
 
 export async function updateStudent(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { name, enrollmentNo, batch, parentPhone, parentName } = req.body as {
-    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string;
+  const { name, enrollmentNo, batch, parentPhone, parentName, parentEmail } = req.body as {
+    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string; parentEmail?: string;
   };
 
   if (!name || !enrollmentNo || !batch || !parentPhone) {
@@ -116,9 +116,15 @@ export async function updateStudent(req: Request, res: Response): Promise<void> 
 
   let parent = await prisma.parent.findFirst({ where: { phone: parentPhone } });
   if (!parent) {
-    parent = await prisma.parent.create({ data: { name: parentName || "Parent", phone: parentPhone } });
-  } else if (parentName) {
-    parent = await prisma.parent.update({ where: { id: parent.id }, data: { name: parentName } });
+    parent = await prisma.parent.create({ data: { name: parentName || "Parent", phone: parentPhone, email: parentEmail || null } });
+  } else {
+    parent = await prisma.parent.update({
+      where: { id: parent.id },
+      data: {
+        ...(parentName ? { name: parentName } : {}),
+        ...(parentEmail !== undefined ? { email: parentEmail || null } : {}),
+      },
+    });
   }
 
   const updated = await prisma.student.update({
