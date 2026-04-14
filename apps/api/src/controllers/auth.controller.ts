@@ -132,15 +132,19 @@ async function sendEmailOtp(email: string, otp: string): Promise<void> {
       const nodemailer = await import("nodemailer");
       // Use port 587 (STARTTLS) — Render free tier blocks port 465
       // Force IPv4 to avoid ENETUNREACH on Render
+      const dns = await import("dns");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transporter = nodemailer.default.createTransport({
         host: "smtp.gmail.com",
         port: 587,
         secure: false,
-        family: 4,
         connectionTimeout: 8000,
         greetingTimeout: 8000,
         socketTimeout: 8000,
+        // Force IPv4 — Render free tier has no IPv6 outbound
+        dnsLookup: (hostname: string, options: unknown, callback: (err: Error | null, address: string, family: number) => void) => {
+          dns.default.lookup(hostname, { family: 4 }, callback as (err: NodeJS.ErrnoException | null, address: string, family: number) => void);
+        },
         auth: { user: gmailUser, pass: gmailPass },
       } as any);
       await transporter.sendMail({
