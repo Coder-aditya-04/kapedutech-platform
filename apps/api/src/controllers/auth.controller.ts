@@ -123,33 +123,20 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
 }
 
 async function sendEmailOtp(email: string, otp: string): Promise<void> {
-  const gmailUser = process.env["GMAIL_USER"];
-  const gmailPass = process.env["GMAIL_APP_PASSWORD"];
   // Always log OTP so it's visible in Render logs as fallback
   console.log(`[OTP] Email: ${email}  OTP: ${otp}`);
-  if (gmailUser && gmailPass) {
-    try {
-      const nodemailer = await import("nodemailer");
-      // Use port 587 (STARTTLS) — Render free tier blocks port 465
-      // Force IPv4 to avoid ENETUNREACH on Render
-      const dns = await import("dns");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const transporter = nodemailer.default.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        connectionTimeout: 8000,
-        greetingTimeout: 8000,
-        socketTimeout: 8000,
-        // Force IPv4 — Render free tier has no IPv6 outbound
-        dnsLookup: (hostname: string, options: unknown, callback: (err: Error | null, address: string, family: number) => void) => {
-          dns.default.lookup(hostname, { family: 4 }, callback as (err: NodeJS.ErrnoException | null, address: string, family: number) => void);
-        },
-        auth: { user: gmailUser, pass: gmailPass },
-      } as any);
-      await transporter.sendMail({
-        from: `"KAP Edutech" <${gmailUser}>`,
-        to: email,
+  const resendKey = process.env["RESEND_API_KEY"];
+  if (!resendKey) return;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "KAP Edutech <onboarding@resend.dev>",
+        to: [email],
         subject: `${otp} — Your KAP Edutech Login OTP`,
         html: `
           <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;border:1px solid #E5E7EB">
@@ -158,11 +145,16 @@ async function sendEmailOtp(email: string, otp: string): Promise<void> {
             <div style="background:#EEF2FF;border-radius:10px;padding:20px;text-align:center;letter-spacing:8px;font-size:32px;font-weight:800;color:#4F46E5">${otp}</div>
             <p style="color:#9CA3AF;font-size:12px;margin:20px 0 0">Valid for 10 minutes. Do not share this code with anyone.</p>
           </div>`,
-      });
-      console.log(`[OTP] Email delivered to ${email}`);
-    } catch (e) {
-      console.error(`[OTP] Email send error:`, e);
+      }),
+    });
+    const data = await res.json() as { id?: string; message?: string; name?: string };
+    if (res.ok) {
+      console.log(`[OTP] Email delivered via Resend, id: ${data.id}`);
+    } else {
+      console.error(`[OTP] Resend error:`, data.message ?? data.name);
     }
+  } catch (e) {
+    console.error(`[OTP] Email send error:`, e);
   }
 }
 
