@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 
-type Student = { id: string; name: string; enrollmentNo: string; batch: string; parent: { phone: string; name: string; email?: string } };
+type Student = { id: string; name: string; enrollmentNo: string; batch: string; parent: { phone: string; name: string } };
 
 function exportCSV(students: Student[]) {
   const rows = [
@@ -20,11 +20,11 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "", parentEmail: "" });
+  const [form, setForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "", parentEmail: "" });
+  const [editForm, setEditForm] = useState({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
   const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -57,7 +57,7 @@ export default function StudentsPage() {
       if (res.ok) {
         showToast("Student added successfully!", true);
         setShowModal(false);
-        setForm({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "", parentEmail: "" });
+        setForm({ name: "", enrollmentNo: "", batch: "JEE", parentName: "", parentPhone: "" });
         load();
       } else {
         const d = await res.json();
@@ -71,7 +71,7 @@ export default function StudentsPage() {
 
   function openEdit(s: Student) {
     setEditStudent(s);
-    setEditForm({ name: s.name, enrollmentNo: s.enrollmentNo, batch: s.batch || "JEE", parentName: s.parent?.name ?? "", parentPhone: s.parent?.phone ?? "", parentEmail: s.parent?.email ?? "" });
+    setEditForm({ name: s.name, enrollmentNo: s.enrollmentNo, batch: s.batch || "JEE", parentName: s.parent?.name ?? "", parentPhone: s.parent?.phone ?? "" });
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -120,8 +120,7 @@ export default function StudentsPage() {
     { label: "Student Name", key: "name", type: "text", placeholder: "Full name" },
     { label: "Enrollment No", key: "enrollmentNo", type: "text", placeholder: "e.g. JEE2026-001" },
     { label: "Parent Name", key: "parentName", type: "text", placeholder: "Parent full name" },
-    { label: "Parent Phone", key: "parentPhone", type: "tel", placeholder: "10 digit mobile number" },
-    { label: "Parent Email (for app login)", key: "parentEmail", type: "email", placeholder: "parent@gmail.com" },
+    { label: "Parent Phone (for app login)", key: "parentPhone", type: "tel", placeholder: "10 digit mobile number" },
   ];
 
   return (
@@ -168,7 +167,7 @@ export default function StudentsPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                {["Name", "Enrollment No", "Batch", "Parent Name", "Parent Email", "Actions"].map(h => (
+                {["Name", "Enrollment No", "Batch", "Parent Name", "Parent Phone", "Actions"].map(h => (
                   <th key={h} style={{ padding: "11px 18px", textAlign: "left", color: "#9CA3AF", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.7 }}>{h}</th>
                 ))}
               </tr>
@@ -186,7 +185,7 @@ export default function StudentsPage() {
                     <span style={{ background: s.batch === "JEE" ? "#0064E0" : "#6441D2", color: "#fff", borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, display: "inline-block" }}>{s.batch || "—"}</span>
                   </td>
                   <td style={{ padding: "13px 18px", color: "#374151" }}>{s.parent?.name ?? "—"}</td>
-                  <td style={{ padding: "13px 18px", color: s.parent?.email ? "#0064E0" : "#9CA3AF", fontSize: 13 }}>{s.parent?.email ?? "No email set"}</td>
+                  <td style={{ padding: "13px 18px", color: "#0064E0", fontSize: 13, fontFamily: "monospace" }}>{s.parent?.phone ?? "—"}</td>
                   <td style={{ padding: "13px 18px" }}>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <button
