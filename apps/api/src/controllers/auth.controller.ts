@@ -125,32 +125,40 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
 async function sendEmailOtp(email: string, otp: string): Promise<void> {
   const gmailUser = process.env["GMAIL_USER"];
   const gmailPass = process.env["GMAIL_APP_PASSWORD"];
+  // Always log OTP so it's visible in Render logs as fallback
+  console.log(`[OTP] Email: ${email}  OTP: ${otp}`);
   if (gmailUser && gmailPass) {
     try {
       const nodemailer = await import("nodemailer");
+      // Use port 587 (STARTTLS) — Render free tier blocks port 465
+      // Force IPv4 to avoid ENETUNREACH on Render
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transporter = nodemailer.default.createTransport({
-        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        family: 4,
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 8000,
         auth: { user: gmailUser, pass: gmailPass },
-      });
+      } as any);
       await transporter.sendMail({
         from: `"KAP Edutech" <${gmailUser}>`,
         to: email,
         subject: `${otp} — Your KAP Edutech Login OTP`,
         html: `
           <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;border:1px solid #E5E7EB">
-            <img src="https://kapedutech-platform.onrender.com/kap_fav.png" alt="KAP Edutech" style="height:40px;margin-bottom:24px" />
             <h2 style="color:#111827;margin:0 0 8px;font-size:20px">Your Login OTP</h2>
             <p style="color:#6B7280;margin:0 0 24px;font-size:14px">Use this code to sign in to KAP Edutech Parent Portal.</p>
             <div style="background:#EEF2FF;border-radius:10px;padding:20px;text-align:center;letter-spacing:8px;font-size:32px;font-weight:800;color:#4F46E5">${otp}</div>
             <p style="color:#9CA3AF;font-size:12px;margin:20px 0 0">Valid for 10 minutes. Do not share this code with anyone.</p>
           </div>`,
       });
-      console.log(`[OTP] Email sent to ${email}`);
+      console.log(`[OTP] Email delivered to ${email}`);
     } catch (e) {
       console.error(`[OTP] Email send error:`, e);
     }
-  } else {
-    console.log(`[OTP] Email: ${email}  OTP: ${otp}`);
   }
 }
 
@@ -169,8 +177,9 @@ export async function requestOtpByEmail(req: Request, res: Response): Promise<vo
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
   await prisma.otp.create({ data: { phone: email, otp, expiresAt } });
-  await sendEmailOtp(email, otp);
+  // Respond immediately — send email in background so app doesn't wait
   res.status(200).json({ message: "OTP sent to email." });
+  sendEmailOtp(email, otp).catch(e => console.error("[OTP] background send error:", e));
 }
 
 export async function verifyOtpByEmail(req: Request, res: Response): Promise<void> {
