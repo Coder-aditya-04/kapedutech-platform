@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requestOtp, verifyOtp, savePushToken, requestOtpByEmail, verifyOtpByEmail } from "../controllers/auth.controller.js";
+import { requestOtp, verifyOtp, savePushToken, requestOtpByEmail, verifyOtpByEmail, verifyFirebasePhone } from "../controllers/auth.controller.js";
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
 
@@ -10,6 +10,7 @@ router.post("/parent/verify-otp", verifyOtp);
 router.post("/parent/request-otp-email", requestOtpByEmail);
 router.post("/parent/verify-otp-email", verifyOtpByEmail);
 router.post("/parent/push-token", savePushToken);
+router.post("/parent/firebase-verify", verifyFirebasePhone);
 
 router.get("/parent/students/:parentId", async (req: Request, res: Response) => {
   const parentId = req.params["parentId"] as string;

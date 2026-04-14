@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
+import { verifyFirebaseIdToken } from "../lib/firebase.js";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "dev_secret_change_in_prod";
 const OTP_TTL_MINUTES = 10;
@@ -211,4 +212,50 @@ export async function savePushToken(req: Request, res: Response): Promise<void> 
   await prisma.parent.update({ where: { id: parentId }, data: { pushToken } });
 
   res.status(200).json({ message: "Push token saved." });
+}
+
+export async function verifyFirebasePhone(req: Request, res: Response): Promise<void> {
+  const { idToken } = req.body as { idToken?: string };
+
+  if (!idToken) {
+    res.status(400).json({ message: "idToken is required." });
+    return;
+  }
+
+  let phone: string;
+  try {
+    ({ phone } = await verifyFirebaseIdToken(idToken));
+  } catch (e) {
+    res.status(401).json({ message: "Invalid or expired Firebase token." });
+    return;
+  }
+
+  // Normalize phone: Firebase gives +91XXXXXXXXXX, we store 10 digits
+  const normalizedPhone = phone.replace(/^\+91/, "");
+
+  const parent = await prisma.parent.findFirst({
+    where: { phone: normalizedPhone },
+    include: {
+      students: {
+        select: { id: true, name: true, enrollmentNo: true, qrCode: true },
+      },
+    },
+  });
+
+  if (!parent) {
+    res.status(404).json({ message: "No parent account found for this number. Contact your institute." });
+    return;
+  }
+
+  const token = jwt.sign({ parentId: parent.id, phone: parent.phone }, JWT_SECRET, { expiresIn: "30d" });
+
+  res.status(200).json({
+    token,
+    parent: {
+      id: parent.id,
+      name: parent.name,
+      phone: parent.phone,
+      students: parent.students,
+    },
+  });
 }

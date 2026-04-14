@@ -1,4 +1,5 @@
 const BASE_URL = "https://kapedutech-platform.onrender.com/api/auth";
+const FIREBASE_VERIFY_URL = `${BASE_URL}/parent/firebase-verify`;
 const EMAIL_OTP_URL = `${BASE_URL}/parent/request-otp-email`;
 const EMAIL_VERIFY_URL = `${BASE_URL}/parent/verify-otp-email`;
 const ATTENDANCE_URL = "https://kapedutech-platform.onrender.com/api/attendance";
@@ -110,5 +111,16 @@ export async function verifyOtpEmail(email: string, otp: string): Promise<Verify
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? "OTP verification failed.");
+  return data as VerifyOtpResponse;
+}
+
+export async function verifyFirebaseToken(idToken: string): Promise<VerifyOtpResponse> {
+  const res = await fetch(FIREBASE_VERIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? "Login failed.");
   return data as VerifyOtpResponse;
 }

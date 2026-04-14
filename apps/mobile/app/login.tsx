@@ -2,15 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
   TouchableOpacity, TextInput as RNTextInput,
-  ScrollView, NativeSyntheticEvent, TextInputKeyPressEventData,
+  ScrollView,
 } from "react-native";
 import { Image } from "expo-image";
 import { Text } from "react-native-paper";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import auth, { type FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useAuth } from "@/src/context/AuthContext";
-import { requestOtp, verifyOtp, savePushToken } from "@/src/api/auth";
+import { verifyFirebaseToken, savePushToken } from "@/src/api/auth";
 
 async function registerForPushNotifications(): Promise<string | null> {
   try {
@@ -39,7 +40,7 @@ export default function LoginScreen() {
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+  const confirmationRef = useRef<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const otpRefs = useRef<(RNTextInput | null)[]>([]);
 
   useEffect(() => {
@@ -53,7 +54,8 @@ export default function LoginScreen() {
     }
     setError(""); setLoading(true);
     try {
-      await requestOtp(phone);
+      const confirmation = await auth().signInWithPhoneNumber(`+91${phone}`);
+      confirmationRef.current = confirmation;
       setStep("otp");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send OTP.");
@@ -63,9 +65,13 @@ export default function LoginScreen() {
   async function handleVerifyOtp() {
     const otp = otpDigits.join("");
     if (otp.length !== OTP_LENGTH) { setError("Enter the 6-digit OTP."); return; }
+    if (!confirmationRef.current) { setError("Session expired. Please resend OTP."); return; }
     setError(""); setLoading(true);
     try {
-      const { token, parent } = await verifyOtp(phone, otp);
+      const credential = await confirmationRef.current.confirm(otp);
+      if (!credential?.user) throw new Error("Verification failed.");
+      const idToken = await credential.user.getIdToken();
+      const { token, parent } = await verifyFirebaseToken(idToken);
       await AsyncStorage.setItem("auth_token", token);
       await AsyncStorage.setItem("parent", JSON.stringify(parent));
       login(phone);
@@ -97,7 +103,7 @@ export default function LoginScreen() {
     if (digit && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus();
   }
 
-  function handleOtpKeyPress(e: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) {
+  function handleOtpKeyPress(e: { nativeEvent: { key: string } }, index: number) {
     if (e.nativeEvent.key === "Backspace" && !otpDigits[index] && index > 0) {
       const newDigits = [...otpDigits];
       newDigits[index - 1] = "";
@@ -116,7 +122,6 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Image
             source={require("@/assets/images/kap_logo.png")}
@@ -126,7 +131,6 @@ export default function LoginScreen() {
           <Text style={styles.brandSub}>Parent Attendance Portal</Text>
         </View>
 
-        {/* Card */}
         <View style={styles.card}>
           {step === "phone" ? (
             <>
@@ -204,7 +208,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => { setStep("phone"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); }}
+                onPress={() => { setStep("phone"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); confirmationRef.current = null; }}
                 style={styles.secondaryBtn}
               >
                 <Text style={styles.secondaryBtnText}>Change number</Text>
