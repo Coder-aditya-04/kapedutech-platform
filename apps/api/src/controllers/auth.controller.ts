@@ -135,7 +135,7 @@ async function sendEmailOtp(email: string, otp: string): Promise<void> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "KAP Edutech <onboarding@resend.dev>",
+        from: "KAP Edutech <noreply@prayaaseducation.co.in>",
         to: [email],
         subject: `${otp} — Your KAP Edutech Login OTP`,
         html: `
