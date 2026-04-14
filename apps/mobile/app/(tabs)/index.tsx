@@ -1,10 +1,11 @@
-import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator, TouchableOpacity } from "react-native";
+import { ScrollView, StyleSheet, View, RefreshControl, ActivityIndicator, TouchableOpacity, AppState, AppStateStatus } from "react-native";
 import { Text, Surface, Chip, Divider } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/src/context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useFocusEffect } from "expo-router";
 import { getStudentAttendance, getTodayAttendance, type AttendanceRecord, type TodayAttendance } from "@/src/api/auth";
 
 type Student = { id: string; name: string; enrollmentNo: string; batch: string };
@@ -89,7 +90,22 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Refresh whenever this tab comes into focus + poll every 30s while on screen
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      const interval = setInterval(load, 30000);
+      return () => clearInterval(interval);
+    }, [load])
+  );
+
+  // Refresh when app returns to foreground from background
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
