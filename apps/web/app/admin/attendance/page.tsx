@@ -83,9 +83,9 @@ export default function AttendancePage() {
   const displayDate = new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
+    <div className="admin-page">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+      <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#1C2B33", margin: 0, letterSpacing: -0.3 }}>Attendance</h1>
           <p style={{ color: "#5D6C7B", marginTop: 4, fontSize: 14 }}>{displayDate}</p>
@@ -109,7 +109,7 @@ export default function AttendancePage() {
       </div>
 
       {/* Stats + Batch filter */}
-      <div style={{ display: "flex", gap: 14, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
         {statCards.map(s => (
           <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 22px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${s.border}` }}>
             <span style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{loading ? "—" : s.value}</span>
@@ -131,7 +131,7 @@ export default function AttendancePage() {
 
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-wrap">
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>

@@ -56,10 +56,10 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="admin-page" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
 
       {/* Page header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
+      <div className="page-header" style={{ marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#1C2B33", margin: 0, letterSpacing: -0.3 }}>Dashboard</h1>
           <p style={{ color: "#5D6C7B", marginTop: 4, fontSize: 14 }}>
@@ -87,7 +87,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div className="stat-grid">
         {stats.map(s => (
           <div key={s.label} style={{
             background: "#FFFFFF",
@@ -146,7 +146,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Table */}
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-wrap">
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ background: "#F7F8FA" }}>

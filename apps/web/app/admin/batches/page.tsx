@@ -53,7 +53,7 @@ export default function BatchesPage() {
   const COLORS = ["#0064E0", "#6441D2", "#059669", "#D97706", "#DC2626", "#0891B2", "#7C3AED", "#BE185D"];
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
+    <div className="admin-page">
       {toast && (
         <div style={{ position: "fixed", top: 24, right: 24, background: toast.ok ? "#ECFDF5" : "#FEF2F2", color: toast.ok ? "#059669" : "#DC2626", padding: "12px 20px", borderRadius: 12, fontWeight: 600, fontSize: 14, zIndex: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", border: `1px solid ${toast.ok ? "#A7F3D0" : "#FECACA"}` }}>
           {toast.ok ? "✓" : "✕"} {toast.msg}
@@ -89,7 +89,7 @@ export default function BatchesPage() {
           <p style={{ color: "#9CA3AF", margin: 0, fontSize: 15 }}>No batches yet. Create your first batch above.</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+        <div className="card-grid">
           {batches.map((batch, i) => {
             const color = COLORS[i % COLORS.length];
             const pct = batch.avgAttendancePct;

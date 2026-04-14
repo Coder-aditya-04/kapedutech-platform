@@ -190,7 +190,7 @@ export default function ResultsPage() {
   }
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
+    <div className="admin-page">
       {toast && (
         <div style={{ position: "fixed", top: 24, right: 24, background: toast.ok ? "#ECFDF5" : "#FEF2F2", color: toast.ok ? "#059669" : "#DC2626", padding: "12px 20px", borderRadius: 12, fontWeight: 600, fontSize: 14, zIndex: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", border: `1px solid ${toast.ok ? "#A7F3D0" : "#FECACA"}` }}>
           {toast.ok ? "✓" : "✕"} {toast.msg}

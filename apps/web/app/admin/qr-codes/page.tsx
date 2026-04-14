@@ -101,12 +101,12 @@ export default function QRCodesPage() {
   }
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100vh" }}>
+    <div className="admin-page">
       {/* Print styles */}
       <style>{`@media print { .no-print { display: none !important; } body { background: white; } }`}</style>
 
       {/* Header */}
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+      <div className="no-print page-header" style={{ marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#1C2B33", margin: 0, letterSpacing: -0.3 }}>QR Codes</h1>
           <p style={{ color: "#5D6C7B", marginTop: 4, fontSize: 14 }}>Download student QR codes for ID cards &amp; attendance</p>
@@ -154,7 +154,7 @@ export default function QRCodesPage() {
       ) : filtered.length === 0 ? (
         <div style={{ padding: 60, textAlign: "center", color: "#9CA3AF" }}>No students found</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+        <div className="qr-card-grid">
           {filtered.map(s => <QRCard key={s.id} student={s} />)}
         </div>
       )}

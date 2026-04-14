@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -67,12 +67,16 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("admin_auth") !== "true") {
       router.replace("/admin");
     }
   }, [router]);
+
+  // Close sidebar on route change
+  useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   function handleLogout() {
     localStorage.removeItem("admin_auth");
@@ -81,21 +85,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (pathname === "/admin") return <>{children}</>;
 
+  const activeLabel = NAV.find(n => pathname.startsWith(n.href))?.label ?? "Admin";
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", background: "#F1F4F7" }}>
 
+      {/* Overlay (mobile) */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? " open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <aside style={{
-        width: 248,
-        background: "#FFFFFF",
-        display: "flex",
-        flexDirection: "column",
-        position: "fixed",
-        top: 0, left: 0, bottom: 0,
-        zIndex: 40,
-        borderRight: "1px solid #DEE3E9",
-        boxShadow: "2px 0 8px rgba(0,0,0,0.04)",
-      }}>
+      <aside className={`admin-sidebar${sidebarOpen ? " open" : ""}`}>
 
         {/* Logo */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #DEE3E9", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -149,8 +151,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main content */}
-      <main style={{ flex: 1, marginLeft: 248, minHeight: "100vh", background: "#F1F4F7" }}>{children}</main>
+      {/* Main */}
+      <main className="admin-main">
+        {/* Mobile top bar */}
+        <div className="admin-topbar">
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            style={{ background: "none", border: "none", padding: 6, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "#1C2B33" }}
+            aria-label="Open menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#1C2B33" }}>{activeLabel}</span>
+          <Image src="/kap_fav.png" alt="KAP Edutech" width={80} height={28} style={{ height: 28, width: "auto", objectFit: "contain" }} />
+        </div>
+
+        {children}
+      </main>
     </div>
   );
 }
