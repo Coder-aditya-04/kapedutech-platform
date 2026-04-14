@@ -60,12 +60,20 @@ export default function ScanPage() {
           await videoRef.current.play();
         }
 
-        // Use native BarcodeDetector if available — hardware-accelerated, much faster
+        // Use native BarcodeDetector only if it actually supports qr_code format
+        let useBarcodeDetector = false;
         if ("BarcodeDetector" in window) {
+          try {
+            const formats = await (BarcodeDetector as unknown as { getSupportedFormats(): Promise<string[]> }).getSupportedFormats();
+            useBarcodeDetector = formats.includes("qr_code");
+          } catch { useBarcodeDetector = false; }
+        }
+
+        if (useBarcodeDetector) {
           const detector = new BarcodeDetector({ formats: ["qr_code"] });
           scanLoop(detector);
         } else {
-          // Fallback: html5-qrcode (slower ZXing decoder)
+          // Fallback: html5-qrcode (ZXing decoder) — works on all browsers
           startHtml5Fallback(stream);
         }
       } catch {
@@ -83,33 +91,52 @@ export default function ScanPage() {
   }, []);
 
   function scanLoop(detector: BarcodeDetector) {
-    async function tick() {
-      const video = videoRef.current;
-      if (video && video.readyState >= 2 && !processingRef.current) {
-        try {
-          const codes = await detector.detect(video);
-          if (codes.length > 0) {
-            await handleScan(codes[0].rawValue);
-          }
-        } catch { /* ignore decode errors */ }
-      }
-      animRef.current = requestAnimationFrame(tick);
+    let detecting = false;
+    function tick() {
+      animRef.current = requestAnimationFrame(async () => {
+        const video = videoRef.current;
+        if (!detecting && video && video.readyState >= 2 && video.videoWidth > 0 && !processingRef.current) {
+          detecting = true;
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length > 0) await handleScan(codes[0].rawValue);
+          } catch { /* ignore single-frame decode errors */ }
+          detecting = false;
+        }
+        tick();
+      });
     }
-    animRef.current = requestAnimationFrame(tick);
+    tick();
   }
 
-  // html5-qrcode fallback (Firefox / older browsers)
+  // html5-qrcode fallback (Firefox / older browsers / no BarcodeDetector)
   async function startHtml5Fallback(stream: MediaStream) {
-    stream.getTracks().forEach(t => t.stop()); // html5-qrcode opens its own stream
+    // Stop our stream — html5-qrcode will open its own
+    stream.getTracks().forEach(t => t.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
+
     const { Html5Qrcode } = await import("html5-qrcode");
-    const scanner = new Html5Qrcode("qr-fallback");
     const size = computeBoxSize();
-    await scanner.start(
+    const scanner = new Html5Qrcode("qr-fallback");
+    scanner.start(
       { facingMode: "environment" },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { fps: 15, qrbox: { width: Math.round(size * 0.8), height: Math.round(size * 0.8) }, disableFlip: true } as any,
-      handleScan, () => {}
-    ).catch(() => setCamError("Could not start scanner."));
+      { fps: 10, qrbox: { width: Math.round(size * 0.75), height: Math.round(size * 0.75) }, disableFlip: true } as any,
+      (text: string) => handleScan(text),
+      () => {}
+    ).then(() => {
+      // Style the fallback scanner to fill the box
+      setTimeout(() => {
+        const root = document.getElementById("qr-fallback");
+        if (!root) return;
+        Array.from(root.children).forEach(c => {
+          const el = c as HTMLElement;
+          if (!el.id?.includes("scan_region")) el.style.display = "none";
+        });
+        const video = root.querySelector("video") as HTMLVideoElement | null;
+        if (video) Object.assign(video.style, { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "cover" });
+      }, 400);
+    }).catch(() => setCamError("Could not start scanner."));
   }
 
   async function handleScan(decodedText: string) {
