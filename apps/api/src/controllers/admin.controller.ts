@@ -153,3 +153,44 @@ export async function dateAttendance(req: Request, res: Response): Promise<void>
   });
   res.json(records);
 }
+
+export async function importStudents(req: Request, res: Response): Promise<void> {
+  const { rows } = req.body as {
+    rows?: { name: string; enrollmentNo: string; batch: string; parentName: string; parentPhone: string }[];
+  };
+  if (!rows?.length) { res.status(400).json({ message: "rows array is required." }); return; }
+
+  let created = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const row of rows) {
+    const { name, enrollmentNo, batch, parentName, parentPhone } = row;
+    if (!name || !enrollmentNo || !batch || !parentPhone) {
+      errors.push(`Row skipped (missing fields): ${JSON.stringify(row)}`);
+      skipped++;
+      continue;
+    }
+    try {
+      let parent = await prisma.parent.findFirst({ where: { phone: parentPhone } });
+      if (!parent) {
+        parent = await prisma.parent.create({ data: { name: parentName || "Parent", phone: parentPhone } });
+      }
+      const existing = await prisma.student.findFirst({ where: { enrollmentNo } });
+      if (existing) { skipped++; continue; }
+      const student = await prisma.student.create({
+        data: { userId: enrollmentNo, enrollmentNo, name, batch, qrCode: `temp-${Date.now()}-${Math.random()}`, parentId: parent.id },
+      });
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { qrCode: `${student.id}:${enrollmentNo}`, qrCodeGenerated: true },
+      });
+      created++;
+    } catch (e) {
+      errors.push(`Error for ${name}: ${e instanceof Error ? e.message : String(e)}`);
+      skipped++;
+    }
+  }
+
+  res.status(201).json({ created, skipped, errors });
+}

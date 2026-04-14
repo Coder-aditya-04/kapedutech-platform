@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Firebase service account — never commit this
+*-firebase-adminsdk-*.json

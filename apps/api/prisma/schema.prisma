@@ -27,6 +27,28 @@ model Student {
   parentId         String
   parent           Parent       @relation(fields: [parentId], references: [id])
   attendances      Attendance[]
+  results          TestResult[]
+}
+
+model Batch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model TestResult {
+  id          String   @id @default(cuid())
+  testName    String
+  testDate    String
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  rank        Int?
+  totalInBatch Int?
+  scores      Json
+  total       Float
+  percentage  Float
+  percentile  Float?
+  uploadedAt  DateTime @default(now())
 }
 
 model Otp {
