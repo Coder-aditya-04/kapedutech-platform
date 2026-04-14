@@ -2,18 +2,23 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
 
-type ScanStatus = "idle" | "success" | "punch_out" | "already_marked" | "not_found" | "error";
+// BarcodeDetector is not yet in TypeScript's lib.dom — declare it manually
+declare class BarcodeDetector {
+  constructor(options?: { formats: string[] });
+  detect(src: HTMLVideoElement | HTMLCanvasElement | ImageBitmap): Promise<Array<{ rawValue: string }>>;
+  static getSupportedFormats(): Promise<string[]>;
+}
+
+type ScanStatus = "idle" | "verifying" | "success" | "punch_out" | "already_marked" | "not_found" | "error";
 interface AttendanceResult { studentName: string; time: string; type: "PUNCH_IN" | "PUNCH_OUT"; }
 
-const SCANNER_ID = "qr-reader";
-const COOLDOWN_MS = 3000;
+const COOLDOWN_MS = 2500;
 
 function computeBoxSize() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  return Math.min(420, vh - 320, vw - 48);
+  return Math.min(420, vh - 300, vw - 32);
 }
 
 function useDateTime() {
@@ -27,51 +32,91 @@ export default function ScanPage() {
   const [result, setResult] = useState<AttendanceResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [boxSize, setBoxSize] = useState(380);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [camError, setCamError] = useState("");
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animRef = useRef<number>(0);
   const processingRef = useRef(false);
   const now = useDateTime();
 
   const dateStr = now.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
 
-  useEffect(() => {
-    setBoxSize(computeBoxSize());
-  }, []);
+  useEffect(() => { setBoxSize(computeBoxSize()); }, []);
 
   useEffect(() => {
-    const size = computeBoxSize();
-    const scanner = new Html5Qrcode(SCANNER_ID);
-    scannerRef.current = scanner;
-    const qrbox = Math.round(size * 0.6);
+    let cancelled = false;
 
-    scanner.start(
-      { facingMode: "environment" },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { fps: 30, qrbox: { width: qrbox, height: qrbox }, aspectRatio: 1, disableFlip: true, experimentalFeatures: { useBarCodeDetectorIfSupported: true } } as any,
-      handleScan, () => {}
-    ).then(() => {
-      setTimeout(() => {
-        const root = document.getElementById(SCANNER_ID);
-        if (!root) return;
-        Array.from(root.children).forEach((c) => {
-          const el = c as HTMLElement;
-          if (el.id !== "qr-reader__scan_region") el.style.display = "none";
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 1280 } },
         });
-        const region = document.getElementById("qr-reader__scan_region");
-        if (region) Object.assign(region.style, { position: "absolute", inset: "0", width: "100%", height: "100%", border: "none" });
-        const video = root.querySelector("video") as HTMLVideoElement | null;
-        if (video) Object.assign(video.style, { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "cover", display: "block" });
-        root.querySelectorAll("canvas").forEach((c) => Object.assign((c as HTMLElement).style, { position: "absolute", inset: "0", width: "100%", height: "100%" }));
-      }, 300);
-    }).catch(() => { setStatus("error"); setErrorMsg("Could not access camera."); });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
 
-    return () => { scanner.isScanning && scanner.stop().catch(() => {}); };
+        // Use native BarcodeDetector if available — hardware-accelerated, much faster
+        if ("BarcodeDetector" in window) {
+          const detector = new BarcodeDetector({ formats: ["qr_code"] });
+          scanLoop(detector);
+        } else {
+          // Fallback: html5-qrcode (slower ZXing decoder)
+          startHtml5Fallback(stream);
+        }
+      } catch {
+        if (!cancelled) setCamError("Could not access camera. Please allow camera permission.");
+      }
+    }
+
+    startCamera();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function scanLoop(detector: BarcodeDetector) {
+    async function tick() {
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && !processingRef.current) {
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length > 0) {
+            await handleScan(codes[0].rawValue);
+          }
+        } catch { /* ignore decode errors */ }
+      }
+      animRef.current = requestAnimationFrame(tick);
+    }
+    animRef.current = requestAnimationFrame(tick);
+  }
+
+  // html5-qrcode fallback (Firefox / older browsers)
+  async function startHtml5Fallback(stream: MediaStream) {
+    stream.getTracks().forEach(t => t.stop()); // html5-qrcode opens its own stream
+    const { Html5Qrcode } = await import("html5-qrcode");
+    const scanner = new Html5Qrcode("qr-fallback");
+    const size = computeBoxSize();
+    await scanner.start(
+      { facingMode: "environment" },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { fps: 15, qrbox: { width: Math.round(size * 0.8), height: Math.round(size * 0.8) }, disableFlip: true } as any,
+      handleScan, () => {}
+    ).catch(() => setCamError("Could not start scanner."));
+  }
 
   async function handleScan(decodedText: string) {
     if (processingRef.current) return;
     processingRef.current = true;
+    setStatus("verifying"); // immediate feedback — user knows it was detected
+
     try {
       const res = await fetch("/api/attendance/qr-scan", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -82,11 +127,16 @@ export default function ScanPage() {
         const type: "PUNCH_IN" | "PUNCH_OUT" = data.type === "PUNCH_OUT" ? "PUNCH_OUT" : "PUNCH_IN";
         setResult({ studentName: data.studentName, time: data.time ?? new Date().toLocaleTimeString(), type });
         setStatus(type === "PUNCH_OUT" ? "punch_out" : "success");
+      } else if (res.status === 409) {
+        setStatus("already_marked"); setErrorMsg(data.message ?? "Already marked.");
+      } else if (res.status === 404) {
+        setStatus("not_found"); setErrorMsg("Student not found.");
+      } else {
+        setStatus("error"); setErrorMsg(data.message ?? "Something went wrong.");
       }
-      else if (res.status === 409) { setStatus("already_marked"); setErrorMsg(data.message ?? "Already marked."); }
-      else if (res.status === 404) { setStatus("not_found"); setErrorMsg("Student not found."); }
-      else { setStatus("error"); setErrorMsg(data.message ?? "Something went wrong."); }
-    } catch { setStatus("error"); setErrorMsg("Network error."); }
+    } catch {
+      setStatus("error"); setErrorMsg("Network error.");
+    }
     setTimeout(() => { setStatus("idle"); setResult(null); setErrorMsg(""); processingRef.current = false; }, COOLDOWN_MS);
   }
 
@@ -95,119 +145,113 @@ export default function ScanPage() {
     status === "punch_out" ? "#2563EB" :
     status === "already_marked" ? "#D97706" :
     status === "not_found" || status === "error" ? "#DC2626" :
+    status === "verifying" ? "#7C3AED" :
     "#4F46E5";
 
   return (
     <main style={{
-      minHeight: "100vh",
-      background: "#F8F9FC",
+      minHeight: "100vh", background: "#F8F9FC",
       display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "space-between",
       padding: "24px 16px",
       fontFamily: "'Inter', system-ui, sans-serif",
     }}>
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%" }}>
-        <div style={{
-          background: "#FFFFFF",
-          borderRadius: 16, padding: "12px 28px",
-          border: "1px solid #E5E7EB",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-        }}>
-          <Image src="/kap_fav.png" alt="KAP Edutech" width={180} height={56} priority
-            style={{ height: "clamp(44px,6vh,60px)", width: "auto", objectFit: "contain" }} />
-          <div style={{ fontSize: 10, color: "#9CA3AF", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>
-            Attendance System
-          </div>
+        <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "12px 28px", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <Image src="/kap_fav.png" alt="KAP Edutech" width={180} height={56} priority style={{ height: "clamp(44px,6vh,60px)", width: "auto", objectFit: "contain" }} />
+          <div style={{ fontSize: 10, color: "#9CA3AF", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Attendance System</div>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#16A34A" }} />
-          <span style={{ color: "#6B7280", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>
-            Live Session
-          </span>
+          <span style={{ color: "#6B7280", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Live Session</span>
         </div>
       </div>
 
-      {/* ── SCANNER ── */}
+      {/* SCANNER */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-
-        {/* Scanner box */}
         <div style={{
           position: "relative", width: boxSize, height: boxSize,
           borderRadius: 20, overflow: "hidden",
           border: `2px solid ${borderColor}`,
           boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
           background: "#000",
+          transition: "border-color 0.2s ease",
         }}>
-          {/* Scanner div — always in DOM */}
-          <div id={SCANNER_ID} style={{ position: "relative", width: boxSize, height: boxSize }} />
+          {/* Native video feed (BarcodeDetector path) */}
+          <video
+            ref={videoRef}
+            muted playsInline autoPlay
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
 
-          {/* Scanning line animation */}
+          {/* html5-qrcode fallback div — hidden unless needed */}
+          <div id="qr-fallback" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+
+          {/* Scan line animation */}
           {status === "idle" && (
             <div style={{
-              position: "absolute", left: "10%", right: "10%", height: 2,
+              position: "absolute", left: "5%", right: "5%", height: 2,
               background: "linear-gradient(90deg, transparent, #4F46E5, #818CF8, #4F46E5, transparent)",
               borderRadius: 2, zIndex: 10, pointerEvents: "none",
-              animation: "scanline 2s ease-in-out infinite",
-              boxShadow: "0 0 8px 2px rgba(79,70,229,0.5)",
+              animation: "scanline 1.8s ease-in-out infinite",
+              boxShadow: "0 0 10px 3px rgba(79,70,229,0.5)",
             }} />
           )}
 
           {/* Corner accents */}
-          {[
+          {([
             { top: 10, left: 10, borderTop: `3px solid ${borderColor}`, borderLeft: `3px solid ${borderColor}`, borderRadius: "10px 0 0 0" },
             { top: 10, right: 10, borderTop: `3px solid ${borderColor}`, borderRight: `3px solid ${borderColor}`, borderRadius: "0 10px 0 0" },
             { bottom: 10, left: 10, borderBottom: `3px solid ${borderColor}`, borderLeft: `3px solid ${borderColor}`, borderRadius: "0 0 0 10px" },
             { bottom: 10, right: 10, borderBottom: `3px solid ${borderColor}`, borderRight: `3px solid ${borderColor}`, borderRadius: "0 0 10px 0" },
-          ].map((s, i) => (
-            <div key={i} style={{ position: "absolute", width: 26, height: 26, pointerEvents: "none", zIndex: 10, ...s }} />
+          ] as React.CSSProperties[]).map((s, i) => (
+            <div key={i} style={{ position: "absolute", width: 28, height: 28, pointerEvents: "none", zIndex: 10, ...s }} />
           ))}
 
+          {/* Camera error */}
+          {camError && (
+            <div style={{ position: "absolute", inset: 0, zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", borderRadius: 18, padding: 24, textAlign: "center" }}>
+              <p style={{ color: "#FCA5A5", fontWeight: 600, fontSize: 14 }}>{camError}</p>
+            </div>
+          )}
+
           {/* Result overlay */}
-          {status !== "idle" && (
+          {status !== "idle" && !camError && (
             <div style={{
               position: "absolute", inset: 0, zIndex: 20,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               background:
+                status === "verifying" ? "rgba(245,243,255,0.97)" :
                 status === "success" ? "rgba(240,253,244,0.97)" :
                 status === "punch_out" ? "rgba(239,246,255,0.97)" :
                 status === "already_marked" ? "rgba(255,251,235,0.97)" :
                 "rgba(254,242,242,0.97)",
-              borderRadius: 18,
-              padding: 28,
-              textAlign: "center",
+              borderRadius: 18, padding: 28, textAlign: "center",
             }}>
-              {status === "success" && result && (
+              {status === "verifying" && (
                 <>
-                  <div style={{
-                    width: 56, height: 56, borderRadius: "50%",
-                    background: "#DCFCE7", border: "2px solid #16A34A",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    marginBottom: 14,
-                  }}>
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#EDE9FE", border: "2px solid #7C3AED", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 0.8s linear infinite" }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                     </svg>
                   </div>
-                  <span style={{ color: "#15803D", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "block" }}>
-                    Attendance Marked
-                  </span>
-                  <p style={{ color: "#111827", fontWeight: 800, fontSize: "clamp(18px,3.5vw,26px)", margin: "0 0 4px" }}>
-                    {result.studentName}
-                  </p>
-                  <p style={{ color: "#6B7280", fontSize: 14, margin: "0 0 16px" }}>
-                    Checked in at <span style={{ color: "#15803D", fontWeight: 700 }}>{result.time}</span>
-                  </p>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "6px 16px" }}>
-                      <div style={{ color: "#C2410C", fontSize: 11, fontWeight: 700 }}>🔥 Keep the streak!</div>
-                    </div>
-                    <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "6px 16px" }}>
-                      <div style={{ color: "#4338CA", fontSize: 11, fontWeight: 700 }}>🏆 Aim for Rank 1!</div>
-                    </div>
+                  <span style={{ color: "#6D28D9", fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>Verifying...</span>
+                </>
+              )}
+
+              {status === "success" && result && (
+                <>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#DCFCE7", border: "2px solid #16A34A", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
+                  <span style={{ color: "#15803D", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "block" }}>Attendance Marked</span>
+                  <p style={{ color: "#111827", fontWeight: 800, fontSize: "clamp(18px,3.5vw,26px)", margin: "0 0 4px" }}>{result.studentName}</p>
+                  <p style={{ color: "#6B7280", fontSize: 14, margin: "0 0 16px" }}>Checked in at <span style={{ color: "#15803D", fontWeight: 700 }}>{result.time}</span></p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                    <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "6px 16px" }}><div style={{ color: "#C2410C", fontSize: 11, fontWeight: 700 }}>🔥 Keep the streak!</div></div>
+                    <div style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: "6px 16px" }}><div style={{ color: "#4338CA", fontSize: 11, fontWeight: 700 }}>🏆 Aim for Rank 1!</div></div>
                   </div>
                 </>
               )}
@@ -215,20 +259,12 @@ export default function ScanPage() {
               {status === "punch_out" && result && (
                 <>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#DBEAFE", border: "2px solid #2563EB", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                   </div>
                   <span style={{ color: "#1D4ED8", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "block" }}>Punched Out</span>
                   <p style={{ color: "#111827", fontWeight: 800, fontSize: "clamp(18px,3.5vw,26px)", margin: "0 0 4px" }}>{result.studentName}</p>
-                  <p style={{ color: "#6B7280", fontSize: 14, margin: "0 0 16px" }}>
-                    Checked out at <span style={{ color: "#1D4ED8", fontWeight: 700 }}>{result.time}</span>
-                  </p>
-                  <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "6px 16px" }}>
-                    <div style={{ color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>See you tomorrow! 👋</div>
-                  </div>
+                  <p style={{ color: "#6B7280", fontSize: 14, margin: "0 0 16px" }}>Checked out at <span style={{ color: "#1D4ED8", fontWeight: 700 }}>{result.time}</span></p>
+                  <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "6px 16px" }}><div style={{ color: "#1D4ED8", fontSize: 11, fontWeight: 700 }}>See you tomorrow! 👋</div></div>
                 </>
               )}
 
@@ -243,9 +279,7 @@ export default function ScanPage() {
               {(status === "not_found" || status === "error") && (
                 <>
                   <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
-                  <p style={{ color: "#991B1B", fontWeight: 800, fontSize: 20, margin: "0 0 6px" }}>
-                    {status === "not_found" ? "Not Registered" : "Error"}
-                  </p>
+                  <p style={{ color: "#991B1B", fontWeight: 800, fontSize: 20, margin: "0 0 6px" }}>{status === "not_found" ? "Not Registered" : "Error"}</p>
                   <p style={{ color: "#6B7280", fontSize: 13, margin: 0 }}>{errorMsg}</p>
                 </>
               )}
@@ -254,17 +288,13 @@ export default function ScanPage() {
         </div>
 
         <p style={{ color: "#9CA3AF", fontSize: 13, margin: 0 }}>
-          {status === "idle" ? "Hold QR code steady in the frame" : "Scanner ready — next student can scan"}
+          {status === "idle" ? "Point camera at QR code" : status === "verifying" ? "QR detected — saving..." : "Ready for next student"}
         </p>
       </div>
 
-      {/* ── FOOTER CLOCK ── */}
+      {/* FOOTER CLOCK */}
       <div style={{ textAlign: "center" }}>
-        <div style={{
-          background: "#FFFFFF", borderRadius: 14, padding: "10px 28px",
-          border: "1px solid #E5E7EB",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-        }}>
+        <div style={{ background: "#FFFFFF", borderRadius: 14, padding: "10px 28px", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
           <p style={{ fontFamily: "monospace", fontWeight: 800, color: "#111827", fontSize: "clamp(20px,3.2vw,30px)", margin: 0, letterSpacing: 2 }}>{timeStr}</p>
           <p style={{ color: "#9CA3AF", fontSize: "clamp(10px,1.4vw,13px)", margin: "3px 0 0" }}>{dateStr}</p>
         </div>
@@ -272,15 +302,17 @@ export default function ScanPage() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        #qr-reader__dashboard, #qr-reader__header_message, #qr-reader__status_span,
-        #qr-reader > p, #qr-reader select, #qr-reader button { display: none !important; }
-        #qr-reader__scan_region { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: none !important; line-height: 0 !important; }
-        #qr-reader__scan_region video { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block !important; }
-        #qr-reader__scan_region canvas { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; }
+        #qr-fallback > * { display: none !important; }
+        #qr-fallback__scan_region { display: block !important; position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: none !important; }
+        #qr-fallback__scan_region video { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block !important; }
         @keyframes scanline {
-          0%   { top: 10%; }
-          50%  { top: 88%; }
-          100% { top: 10%; }
+          0%   { top: 8%; }
+          50%  { top: 86%; }
+          100% { top: 8%; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     </main>
