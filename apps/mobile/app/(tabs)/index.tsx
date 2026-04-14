@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/src/context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useFocusEffect } from "expo-router";
 import { getStudentAttendance, getTodayAttendance, type AttendanceRecord, type TodayAttendance } from "@/src/api/auth";
 
@@ -278,10 +278,11 @@ export default function DashboardScreen() {
                 return <View key={idx} style={styles.calCell} />;
               }
               const dateStr = toDateStr(calMonth.year, calMonth.month, day);
-              const hasAtt = !!attendanceMap[dateStr];
+              const isPresent = !!attendanceMap[dateStr];
               const isTodayCell = dateStr === todayStr;
               const isSelected = selectedDate === dateStr;
               const isFuture = dateStr > todayStr;
+              const isAbsent = dateStr < todayStr && !isPresent;
 
               return (
                 <TouchableOpacity
@@ -291,7 +292,8 @@ export default function DashboardScreen() {
                     styles.calDay,
                     isSelected && styles.calDaySelected,
                     !isSelected && isTodayCell && styles.calDayToday,
-                    !isSelected && !isTodayCell && hasAtt && styles.calDayHasAtt,
+                    !isSelected && !isTodayCell && isPresent && styles.calDayPresent,
+                    !isSelected && !isTodayCell && isAbsent && styles.calDayAbsent,
                     isFuture && styles.calDayFuture,
                   ]}
                   onPress={() => {
@@ -303,13 +305,17 @@ export default function DashboardScreen() {
                   <Text style={[
                     styles.calDayText,
                     (isSelected || isTodayCell) && { color: "#fff" },
-                    !isSelected && !isTodayCell && hasAtt && { color: "#4F46E5", fontWeight: "700" },
+                    !isSelected && !isTodayCell && isPresent && { color: "#15803D", fontWeight: "700" },
+                    !isSelected && !isTodayCell && isAbsent && { color: "#DC2626" },
                     isFuture && { color: "#D1D5DB" },
                   ]}>
                     {day}
                   </Text>
-                  {hasAtt && !isSelected && !isTodayCell && (
-                    <View style={styles.calDot} />
+                  {isPresent && !isSelected && !isTodayCell && (
+                    <View style={[styles.calDot, { backgroundColor: "#16A34A" }]} />
+                  )}
+                  {isAbsent && !isSelected && (
+                    <View style={[styles.calDot, { backgroundColor: "#EF4444" }]} />
                   )}
                 </TouchableOpacity>
               );
@@ -319,15 +325,15 @@ export default function DashboardScreen() {
           {/* Legend */}
           <View style={styles.calLegend}>
             <View style={styles.calLegendItem}>
-              <View style={[styles.calLegendDot, { backgroundColor: "#4F46E5" }]} />
+              <View style={[styles.calLegendDot, { backgroundColor: "#DCFCE7", borderWidth: 1.5, borderColor: "#16A34A" }]} />
               <Text style={styles.calLegendText}>Present</Text>
             </View>
             <View style={styles.calLegendItem}>
-              <View style={[styles.calLegendDot, { backgroundColor: "#E5E7EB" }]} />
+              <View style={[styles.calLegendDot, { backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#EF4444" }]} />
               <Text style={styles.calLegendText}>Absent</Text>
             </View>
             <View style={styles.calLegendItem}>
-              <View style={[styles.calLegendDot, { backgroundColor: "#818CF8", borderWidth: 2, borderColor: "#4F46E5" }]} />
+              <View style={[styles.calLegendDot, { backgroundColor: "#0064E0" }]} />
               <Text style={styles.calLegendText}>Today</Text>
             </View>
           </View>
@@ -479,11 +485,12 @@ const styles = StyleSheet.create({
   calCell: { width: "14.2857%", aspectRatio: 1, justifyContent: "center", alignItems: "center" },
   calDay: { borderRadius: 8 },
   calDaySelected: { backgroundColor: "#4F46E5" },
-  calDayToday: { backgroundColor: "#818CF8" },
-  calDayHasAtt: { backgroundColor: "#EEF2FF" },
-  calDayFuture: { opacity: 0.4 },
+  calDayToday: { backgroundColor: "#0064E0" },
+  calDayPresent: { backgroundColor: "#DCFCE7" },
+  calDayAbsent: { backgroundColor: "#FEF2F2" },
+  calDayFuture: { opacity: 0.35 },
   calDayText: { fontSize: 13, color: "#374151" },
-  calDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#4F46E5", position: "absolute", bottom: 3 },
+  calDot: { width: 5, height: 5, borderRadius: 3, position: "absolute", bottom: 2 },
 
   calLegend: { flexDirection: "row", gap: 16, marginTop: 12, justifyContent: "center" },
   calLegendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
