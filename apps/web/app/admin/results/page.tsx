@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 type Student = { id: string; name: string; enrollmentNo: string; batch: string };
 type TestMeta = { testName: string; testDate: string; count: number };
@@ -178,7 +178,7 @@ export default function ResultsPage() {
                   ].map(f => (
                     <div key={f.key}>
                       <label style={{ fontSize: 11, fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 4 }}>{f.label}</label>
-                      <select value={(mappings as Record<string, string>)[f.key]} onChange={e => setMappings(m => ({ ...m, [f.key]: e.target.value }))} style={{ ...inputStyle, fontSize: 13 }}>
+                      <select value={(mappings as unknown as Record<string, string>)[f.key]} onChange={e => setMappings(m => ({ ...m, [f.key]: e.target.value }))} style={{ ...inputStyle, fontSize: 13 }}>
                         <option value="">— select —</option>
                         {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                       </select>

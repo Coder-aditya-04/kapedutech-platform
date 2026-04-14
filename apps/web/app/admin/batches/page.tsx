@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 type Batch = { id: string; name: string; createdAt: string };
 type Analytics = Batch & { totalStudents: number; avgAttendancePct: number; totalWorkingDays?: number };
