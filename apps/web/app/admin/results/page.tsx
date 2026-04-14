@@ -5,20 +5,39 @@ type Student = { id: string; name: string; enrollmentNo: string; batch: string }
 type TestMeta = { testName: string; testDate: string; count: number };
 type ParsedRow = { rank: number; name: string; enrollmentNo: string; scores: Record<string, number>; total: number; percentage: number };
 
-// Parse pasted PDF table text (tab or multi-space separated)
+// Try multiple split strategies and pick the one most consistent across all lines
 function parsePdfPaste(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const lines = text.trim().split("\n").filter(l => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
-  // Detect separator: tab or multiple spaces
-  const sep = lines[0].includes("\t") ? "\t" : /\s{2,}/;
-  const split = (line: string) => typeof sep === "string" ? line.split(sep) : line.split(sep);
-  const headers = split(lines[0]).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+
+  const strategies: { name: string; fn: (l: string) => string[] }[] = [
+    { name: "tab", fn: l => l.split("\t").map(v => v.trim()).filter((_, i, a) => a.length > 1 || i === 0) },
+    { name: "2+spaces", fn: l => l.split(/\s{2,}/).map(v => v.trim()) },
+    { name: "3+spaces", fn: l => l.split(/\s{3,}/).map(v => v.trim()) },
+    { name: "4+spaces", fn: l => l.split(/\s{4,}/).map(v => v.trim()) },
+  ];
+
+  let bestFn = strategies[0].fn;
+  let bestScore = 0;
+
+  for (const s of strategies) {
+    const counts = lines.map(l => s.fn(l).length);
+    const headerCount = counts[0];
+    if (headerCount <= 1) continue;
+    // Score = (% of rows matching header column count) * number of columns
+    const matching = counts.filter(c => c === headerCount).length;
+    const score = (matching / counts.length) * headerCount;
+    if (score > bestScore) { bestScore = score; bestFn = s.fn; }
+  }
+
+  const headers = bestFn(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
   const rows = lines.slice(1).map(line => {
-    const vals = split(line).map(v => v.trim());
+    const vals = bestFn(line);
     const obj: Record<string, string> = {};
-    headers.forEach((h, i) => { obj[h] = vals[i] ?? ""; });
+    headers.forEach((h, i) => { obj[h] = vals[i]?.trim() ?? ""; });
     return obj;
-  });
+  }).filter(r => Object.values(r).some(v => v));
+
   return { headers, rows };
 }
 
