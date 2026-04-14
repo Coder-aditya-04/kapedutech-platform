@@ -46,7 +46,8 @@ export default function ScanPage() {
 
     scanner.start(
       { facingMode: "environment" },
-      { fps: 60, qrbox: { width: qrbox, height: qrbox }, aspectRatio: 1, disableFlip: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { fps: 30, qrbox: { width: qrbox, height: qrbox }, aspectRatio: 1, disableFlip: true, experimentalFeatures: { useBarCodeDetectorIfSupported: true } } as any,
       handleScan, () => {}
     ).then(() => {
       setTimeout(() => {
@@ -143,6 +144,17 @@ export default function ScanPage() {
         }}>
           {/* Scanner div — always in DOM */}
           <div id={SCANNER_ID} style={{ position: "relative", width: boxSize, height: boxSize }} />
+
+          {/* Scanning line animation */}
+          {status === "idle" && (
+            <div style={{
+              position: "absolute", left: "10%", right: "10%", height: 2,
+              background: "linear-gradient(90deg, transparent, #4F46E5, #818CF8, #4F46E5, transparent)",
+              borderRadius: 2, zIndex: 10, pointerEvents: "none",
+              animation: "scanline 2s ease-in-out infinite",
+              boxShadow: "0 0 8px 2px rgba(79,70,229,0.5)",
+            }} />
+          )}
 
           {/* Corner accents */}
           {[
@@ -265,6 +277,11 @@ export default function ScanPage() {
         #qr-reader__scan_region { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: none !important; line-height: 0 !important; }
         #qr-reader__scan_region video { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block !important; }
         #qr-reader__scan_region canvas { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; }
+        @keyframes scanline {
+          0%   { top: 10%; }
+          50%  { top: 88%; }
+          100% { top: 10%; }
+        }
       `}</style>
     </main>
   );
