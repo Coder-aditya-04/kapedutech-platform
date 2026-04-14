@@ -10,11 +10,10 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useAuth } from "@/src/context/AuthContext";
-import { requestOtp, verifyOtp, savePushToken } from "@/src/api/auth";
+import { requestOtpEmail, verifyOtpEmail, savePushToken } from "@/src/api/auth";
 
 async function registerForPushNotifications(): Promise<string | null> {
   try {
-    // Dynamic import — expo-notifications removed from Expo Go SDK 53+
     const Notifications = await import("expo-notifications");
     const { status: existing } = await Notifications.getPermissionsAsync();
     const { status } = existing === "granted"
@@ -30,31 +29,31 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
 }
 
-type Step = "phone" | "otp";
+type Step = "email" | "otp";
 const OTP_LENGTH = 6;
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const otpRefs = useRef<(RNTextInput | null)[]>([]);
 
-  // Auto-focus first OTP box when step changes
   useEffect(() => {
-    if (step === "otp") {
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
-    }
+    if (step === "otp") setTimeout(() => otpRefs.current[0]?.focus(), 100);
   }, [step]);
 
   async function handleSendOtp() {
-    if (phone.length !== 10) { setError("Enter a valid 10-digit mobile number."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
     setError(""); setLoading(true);
     try {
-      await requestOtp(phone);
+      await requestOtpEmail(email);
       setStep("otp");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send OTP.");
@@ -66,10 +65,10 @@ export default function LoginScreen() {
     if (otp.length !== OTP_LENGTH) { setError("Enter the 6-digit OTP."); return; }
     setError(""); setLoading(true);
     try {
-      const { token, parent } = await verifyOtp(phone, otp);
+      const { token, parent } = await verifyOtpEmail(email, otp);
       await AsyncStorage.setItem("auth_token", token);
       await AsyncStorage.setItem("parent", JSON.stringify(parent));
-      login(phone);
+      login(email);
       router.replace("/(tabs)");
       registerForPushNotifications()
         .then((pushToken) => { if (pushToken) savePushToken(parent.id, pushToken); })
@@ -80,7 +79,6 @@ export default function LoginScreen() {
   }
 
   function handleOtpChange(value: string, index: number) {
-    // Handle paste: if more than 1 char typed at once
     if (value.length > 1) {
       const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH);
       const newDigits = [...otpDigits];
@@ -88,19 +86,15 @@ export default function LoginScreen() {
         newDigits[index + i < OTP_LENGTH ? index + i : OTP_LENGTH - 1] = digits[i];
       }
       setOtpDigits(newDigits);
-      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
-      otpRefs.current[nextIndex]?.focus();
+      otpRefs.current[Math.min(index + digits.length, OTP_LENGTH - 1)]?.focus();
       return;
     }
-
     const digit = value.replace(/\D/g, "");
     const newDigits = [...otpDigits];
     newDigits[index] = digit;
     setOtpDigits(newDigits);
     setError("");
-    if (digit && index < OTP_LENGTH - 1) {
-      otpRefs.current[index + 1]?.focus();
-    }
+    if (digit && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus();
   }
 
   function handleOtpKeyPress(e: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) {
@@ -122,7 +116,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header — white background so logo blends in */}
         <View style={styles.header}>
           <Image
             source={require("@/assets/images/kap_logo.png")}
@@ -134,28 +128,24 @@ export default function LoginScreen() {
 
         {/* Card */}
         <View style={styles.card}>
-          {step === "phone" ? (
+          {step === "email" ? (
             <>
               <Text style={styles.cardTitle}>Sign In</Text>
-              <Text style={styles.cardSub}>Enter your registered mobile number to continue</Text>
+              <Text style={styles.cardSub}>Enter your registered email address to continue</Text>
 
-              <Text style={styles.label}>Mobile Number</Text>
-              <View style={styles.inputRow}>
-                <View style={styles.countryCode}>
-                  <Text style={styles.countryCodeText}>🇮🇳  +91</Text>
-                </View>
-                <RNTextInput
-                  style={styles.phoneInput}
-                  placeholder="10-digit number"
-                  placeholderTextColor="#BDBDBD"
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={(t) => { setPhone(t); setError(""); }}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSendOtp}
-                />
-              </View>
+              <Text style={styles.label}>Email Address</Text>
+              <RNTextInput
+                style={styles.emailInput}
+                placeholder="yourname@gmail.com"
+                placeholderTextColor="#BDBDBD"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={(t) => { setEmail(t); setError(""); }}
+                returnKeyType="done"
+                onSubmitEditing={handleSendOtp}
+              />
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -175,7 +165,7 @@ export default function LoginScreen() {
               <Text style={styles.cardTitle}>Verify OTP</Text>
               <Text style={styles.cardSub}>
                 Enter the 6-digit code sent to{"\n"}
-                <Text style={styles.phoneHighlight}>+91 {phone}</Text>
+                <Text style={styles.emailHighlight}>{email}</Text>
               </Text>
 
               <Text style={styles.label}>One-Time Password</Text>
@@ -192,7 +182,6 @@ export default function LoginScreen() {
                     maxLength={6}
                     selectTextOnFocus
                     textAlign="center"
-                    caretHidden={false}
                   />
                 ))}
               </View>
@@ -211,91 +200,76 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => { setStep("phone"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); }}
+                onPress={() => { setStep("email"); setOtpDigits(Array(OTP_LENGTH).fill("")); setError(""); }}
                 style={styles.secondaryBtn}
               >
-                <Text style={styles.secondaryBtnText}>Change number</Text>
+                <Text style={styles.secondaryBtnText}>Change email</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleSendOtp} style={styles.resendBtn}>
-                <Text style={styles.resendText}>Didn't receive OTP? <Text style={styles.resendLink}>Resend</Text></Text>
+                <Text style={styles.resendText}>
+                  Didn&apos;t receive OTP? <Text style={styles.resendLink}>Resend</Text>
+                </Text>
               </TouchableOpacity>
             </>
           )}
         </View>
 
-        <Text style={styles.footer}>
-          Secure login powered by KAP Edutech
-        </Text>
+        <Text style={styles.footer}>Secure login powered by KAP Edutech</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F6FA" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, paddingVertical: 40 },
 
-  // Header
-  header: { alignItems: "center", marginBottom: 28 },
+  header: { alignItems: "center", marginBottom: 28, backgroundColor: "#FFFFFF" },
   logo: { width: 200, height: 64, marginBottom: 10 },
-  brandSub: { fontSize: 13, color: "#757575", marginTop: 4 },
+  brandSub: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
 
-  // Card
   card: {
     width: "100%", backgroundColor: "#FFFFFF",
     borderRadius: 20, padding: 24,
     shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 20, elevation: 5,
+    borderWidth: 1, borderColor: "#F3F4F6",
   },
-  cardTitle: { fontSize: 22, fontWeight: "800", color: "#1A1A2E", marginBottom: 6 },
+  cardTitle: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 6 },
   cardSub: { fontSize: 14, color: "#757575", marginBottom: 22, lineHeight: 20 },
-  phoneHighlight: { color: "#3730A3", fontWeight: "700" },
+  emailHighlight: { color: "#0064E0", fontWeight: "700" },
   label: { fontSize: 12, fontWeight: "700", color: "#424242", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 },
 
-  // Phone input
-  inputRow: {
-    flexDirection: "row", alignItems: "center",
-    borderWidth: 1.5, borderColor: "#E0E0E0",
+  emailInput: {
+    width: "100%", fontSize: 15, color: "#111827",
+    paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1.5, borderColor: "#E5E7EB",
     borderRadius: 12, marginBottom: 14,
-    backgroundColor: "#FAFAFA", overflow: "hidden",
-  },
-  countryCode: {
-    paddingHorizontal: 14, paddingVertical: 16,
-    borderRightWidth: 1.5, borderRightColor: "#E0E0E0",
-    backgroundColor: "#F5F5F5",
-  },
-  countryCodeText: { fontSize: 14, color: "#424242", fontWeight: "600" },
-  phoneInput: {
-    flex: 1, fontSize: 16, color: "#1A1A2E",
-    paddingHorizontal: 14, paddingVertical: 16,
+    backgroundColor: "#FAFAFA",
   },
 
-  // OTP boxes
   otpRow: { flexDirection: "row", justifyContent: "space-between", gap: 8, marginBottom: 16 },
   otpBox: {
     flex: 1, height: 56,
-    borderWidth: 1.5, borderColor: "#E0E0E0",
+    borderWidth: 1.5, borderColor: "#E5E7EB",
     borderRadius: 12, backgroundColor: "#FAFAFA",
-    fontSize: 22, fontWeight: "700", color: "#1A1A2E",
+    fontSize: 22, fontWeight: "700", color: "#111827",
     textAlign: "center",
   },
-  otpBoxFilled: {
-    borderColor: "#3730A3", backgroundColor: "#EEF2FF",
-  },
+  otpBoxFilled: { borderColor: "#0064E0", backgroundColor: "#EEF6FF" },
 
-  // Buttons
   primaryBtn: {
-    backgroundColor: "#3730A3", borderRadius: 12,
+    backgroundColor: "#0064E0", borderRadius: 100,
     paddingVertical: 16, alignItems: "center", marginTop: 4,
-    shadowColor: "#3730A3", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    shadowColor: "#0064E0", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
   btnDisabled: { opacity: 0.65 },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", letterSpacing: 0.3 },
+  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 
   secondaryBtn: {
-    borderWidth: 1.5, borderColor: "#E0E0E0",
+    borderWidth: 1.5, borderColor: "#E5E7EB",
     borderRadius: 12, paddingVertical: 14,
     alignItems: "center", marginTop: 10,
     backgroundColor: "#FAFAFA",
@@ -304,7 +278,7 @@ const styles = StyleSheet.create({
 
   resendBtn: { alignItems: "center", marginTop: 16 },
   resendText: { fontSize: 13, color: "#9E9E9E" },
-  resendLink: { color: "#3730A3", fontWeight: "700" },
+  resendLink: { color: "#0064E0", fontWeight: "700" },
 
   error: {
     color: "#C62828", fontSize: 13, marginBottom: 10,

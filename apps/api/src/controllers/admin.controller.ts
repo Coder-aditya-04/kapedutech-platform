@@ -10,8 +10,8 @@ export async function listStudents(req: Request, res: Response): Promise<void> {
 }
 
 export async function createStudent(req: Request, res: Response): Promise<void> {
-  const { name, enrollmentNo, batch, parentPhone, parentName } = req.body as {
-    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string;
+  const { name, enrollmentNo, batch, parentPhone, parentName, parentEmail } = req.body as {
+    name: string; enrollmentNo: string; batch: string; parentPhone: string; parentName?: string; parentEmail?: string;
   };
 
   if (!name || !enrollmentNo || !batch || !parentPhone) {
@@ -22,8 +22,10 @@ export async function createStudent(req: Request, res: Response): Promise<void> 
   let parent = await prisma.parent.findFirst({ where: { phone: parentPhone } });
   if (!parent) {
     parent = await prisma.parent.create({
-      data: { name: parentName || "Parent", phone: parentPhone },
+      data: { name: parentName || "Parent", phone: parentPhone, email: parentEmail || null },
     });
+  } else if (parentEmail) {
+    parent = await prisma.parent.update({ where: { id: parent.id }, data: { email: parentEmail } });
   }
 
   const student = await prisma.student.create({

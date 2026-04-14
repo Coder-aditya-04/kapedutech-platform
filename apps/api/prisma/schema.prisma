@@ -11,6 +11,7 @@ model Parent {
   id        String    @id @default(cuid())
   name      String
   phone     String
+  email     String?   @unique
   pushToken String?
   students  Student[]
 }

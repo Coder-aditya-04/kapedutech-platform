@@ -1,4 +1,6 @@
 const BASE_URL = "https://kapedutech-platform.onrender.com/api/auth";
+const EMAIL_OTP_URL = `${BASE_URL}/parent/request-otp-email`;
+const EMAIL_VERIFY_URL = `${BASE_URL}/parent/verify-otp-email`;
 const ATTENDANCE_URL = "https://kapedutech-platform.onrender.com/api/attendance";
 
 export type AttendanceRecord = {
@@ -88,4 +90,25 @@ export async function savePushToken(parentId: string, pushToken: string): Promis
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ parentId, pushToken }),
   });
+}
+
+export async function requestOtpEmail(email: string): Promise<void> {
+  const res = await fetch(EMAIL_OTP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? "Failed to send OTP.");
+}
+
+export async function verifyOtpEmail(email: string, otp: string): Promise<VerifyOtpResponse> {
+  const res = await fetch(EMAIL_VERIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? "OTP verification failed.");
+  return data as VerifyOtpResponse;
 }
