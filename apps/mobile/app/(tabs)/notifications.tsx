@@ -63,34 +63,6 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     loadNotifications();
-
-    let sub: { remove: () => void } | null = null;
-
-    (async () => {
-      try {
-        const Notifications = await import("expo-notifications");
-        sub = Notifications.addNotificationReceivedListener(async (notification) => {
-          const newItem: StoredNotification = {
-            id: notification.request.identifier,
-            title: notification.request.content.title ?? "Notification",
-            body: notification.request.content.body ?? "",
-            time: new Date().toISOString(),
-            read: false,
-          };
-          try {
-            const raw = await AsyncStorage.getItem("notifications");
-            const existing: StoredNotification[] = raw ? JSON.parse(raw) : [];
-            const updated = [newItem, ...existing].slice(0, 50);
-            await AsyncStorage.setItem("notifications", JSON.stringify(updated));
-            setItems(updated);
-          } catch {}
-        });
-      } catch (e) {
-        console.log("[Notifications] Listener skipped:", e);
-      }
-    })();
-
-    return () => { sub?.remove(); };
   }, []);
 
   const groups = groupByDay(items);

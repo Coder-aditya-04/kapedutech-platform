@@ -26,6 +26,23 @@ export async function getStudentAttendance(studentId: string, token: string): Pr
   } catch { return []; }
 }
 
+export type AttendanceSummary = {
+  totalPresent: number;
+  totalWorkingDays: number;
+  currentStreak: number;
+  allTimePct: number;
+};
+
+export async function getAttendanceSummary(studentId: string, token: string): Promise<AttendanceSummary> {
+  try {
+    const res = await fetch(`${ATTENDANCE_URL}/student/${studentId}/summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return { totalPresent: 0, totalWorkingDays: 0, currentStreak: 0, allTimePct: 0 };
+    return res.json();
+  } catch { return { totalPresent: 0, totalWorkingDays: 0, currentStreak: 0, allTimePct: 0 }; }
+}
+
 export async function getTodayAttendance(studentId: string, token: string): Promise<TodayAttendance> {
   try {
     const res = await fetch(`${ATTENDANCE_URL}/student/${studentId}/today`, {

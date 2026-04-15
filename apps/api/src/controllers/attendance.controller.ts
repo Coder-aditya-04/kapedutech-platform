@@ -29,7 +29,7 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const studentName = student.name || student.enrollmentNo;
   const time = new Date().toLocaleTimeString("en-IN", {
-    hour: "2-digit", minute: "2-digit", hour12: true,
+    hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata",
   });
 
   const todayRecords = await prisma.attendance.findMany({
@@ -70,6 +70,43 @@ export async function getStudentAttendance(req: Request, res: Response): Promise
     take: 30,
   });
   res.json(records);
+}
+
+export async function getAttendanceSummary(req: Request, res: Response): Promise<void> {
+  const studentId = req.params["studentId"] as string;
+
+  // All student's PUNCH_IN dates (unique)
+  const allRecords = await prisma.attendance.findMany({
+    where: { studentId, type: "PUNCH_IN" },
+    select: { date: true },
+    orderBy: { date: "asc" },
+  });
+  const presentDates = [...new Set(allRecords.map(r => r.date))];
+  const totalPresent = presentDates.length;
+
+  // Working days = distinct dates any student punched in
+  const workingDaysRaw = await prisma.attendance.findMany({
+    where: { type: "PUNCH_IN" },
+    select: { date: true },
+    distinct: ["date"],
+    orderBy: { date: "asc" },
+  });
+  const totalWorkingDays = workingDaysRaw.length;
+
+  // Current streak — consecutive days present going backwards from today
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const presentSet = new Set(presentDates);
+  let streak = 0;
+  const cursor = new Date(todayStr + "T00:00:00+05:30");
+  while (true) {
+    const d = cursor.toISOString().slice(0, 10);
+    if (presentSet.has(d)) { streak++; cursor.setDate(cursor.getDate() - 1); }
+    else { break; }
+  }
+
+  const allTimePct = totalWorkingDays > 0 ? Math.round((totalPresent / totalWorkingDays) * 100) : 0;
+
+  res.json({ totalPresent, totalWorkingDays, currentStreak: streak, allTimePct });
 }
 
 export async function getStudentTodayAttendance(req: Request, res: Response): Promise<void> {
