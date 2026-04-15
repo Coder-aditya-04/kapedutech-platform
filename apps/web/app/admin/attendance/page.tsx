@@ -5,7 +5,11 @@ type Student = { id: string; name: string; enrollmentNo: string; batch: string }
 type AttendanceRecord = { id: string; studentId: string; date: string; type: "PUNCH_IN" | "PUNCH_OUT"; markedAt: string; student: Student };
 type Summary = { student: Student; punchIn: string | null; punchOut: string | null; punchInMs: number | null; punchOutMs: number | null };
 
-const BATCHES = ["All", "JEE", "NEET"];
+const BATCH_COLORS = ["#0064E0", "#6441D2", "#059669", "#D97706", "#0891B2", "#DC2626"];
+function batchColor(batchName: string, allBatches: string[]) {
+  const idx = allBatches.indexOf(batchName);
+  return BATCH_COLORS[idx % BATCH_COLORS.length] ?? "#0064E0";
+}
 
 function duration(inMs: number, outMs: number) {
   const diff = Math.floor((outMs - inMs) / 60000);
@@ -34,8 +38,16 @@ export default function AttendancePage() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [batch, setBatch] = useState("All");
+  const [batches, setBatches] = useState<string[]>(["All"]);
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
+
+  useEffect(() => {
+    fetch("/api/admin/batches")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { name: string }[]) => setBatches(["All", ...data.map(b => b.name)]))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -117,7 +129,7 @@ export default function AttendancePage() {
           </div>
         ))}
         <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-          {BATCHES.map(b => (
+          {batches.map(b => (
             <button key={b} onClick={() => setBatch(b)} style={{
               padding: "6px 16px", borderRadius: 100, border: "none",
               background: batch === b ? "#0064E0" : "#F1F4F7",
@@ -155,7 +167,7 @@ export default function AttendancePage() {
                     <td style={{ padding: "13px 18px", fontWeight: 600, color: "#111827" }}>{s.student.name}</td>
                     <td style={{ padding: "13px 18px", color: "#6B7280", fontFamily: "monospace", fontSize: 13 }}>{s.student.enrollmentNo}</td>
                     <td style={{ padding: "13px 18px" }}>
-                      <span style={{ background: s.student.batch === "JEE" ? "#0064E0" : "#6441D2", color: "#fff", borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, display: "inline-block" }}>{s.student.batch || "—"}</span>
+                      <span style={{ background: batchColor(s.student.batch, batches.slice(1)), color: "#fff", borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, display: "inline-block" }}>{s.student.batch || "—"}</span>
                     </td>
                     <td style={{ padding: "13px 18px", color: s.punchIn ? "#059669" : "#9CA3AF", fontWeight: s.punchIn ? 600 : 400 }}>{s.punchIn ?? "—"}</td>
                     <td style={{ padding: "13px 18px", color: s.punchOut ? "#2563EB" : "#9CA3AF", fontWeight: s.punchOut ? 600 : 400 }}>{s.punchOut ?? "—"}</td>

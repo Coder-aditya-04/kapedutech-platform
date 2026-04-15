@@ -5,13 +5,25 @@ type Student = { id: string; name: string; enrollmentNo: string; batch: string; 
 type AttendanceRecord = { id: string; studentId: string; date: string; type: "PUNCH_IN" | "PUNCH_OUT"; markedAt: string; student: Student };
 type StudentSummary = { student: Student; punchIn: string | null; punchOut: string | null };
 
-const BATCHES = ["All", "JEE", "NEET"];
+const BATCH_COLORS = ["#0064E0", "#6441D2", "#059669", "#D97706", "#0891B2", "#DC2626"];
+function batchColor(batchName: string, allBatches: string[]) {
+  const idx = allBatches.indexOf(batchName);
+  return BATCH_COLORS[idx % BATCH_COLORS.length] ?? "#0064E0";
+}
 
 export default function DashboardPage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [batch, setBatch] = useState("All");
+  const [batches, setBatches] = useState<string[]>(["All"]);
+
+  useEffect(() => {
+    fetch("/api/admin/batches")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { name: string }[]) => setBatches(["All", ...data.map(b => b.name)]))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -131,7 +143,7 @@ export default function DashboardPage() {
             <p style={{ margin: "3px 0 0", fontSize: 12, color: "#BCC0C4" }}>Live — updates every 30 seconds</p>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            {BATCHES.map(b => (
+            {batches.map(b => (
               <button key={b} onClick={() => setBatch(b)} style={{
                 padding: "5px 16px",
                 borderRadius: 100,
@@ -179,7 +191,7 @@ export default function DashboardPage() {
                     <td style={{ padding: "13px 20px", color: "#5D6C7B", fontFamily: "monospace", fontSize: 13 }}>{s.student.enrollmentNo}</td>
                     <td style={{ padding: "13px 20px" }}>
                       <span style={{
-                        background: s.student.batch === "JEE" ? "#0064E0" : "#6441D2",
+                        background: batchColor(s.student.batch, batches.slice(1)),
                         color: "#fff",
                         borderRadius: 100, padding: "4px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
                         display: "inline-block",

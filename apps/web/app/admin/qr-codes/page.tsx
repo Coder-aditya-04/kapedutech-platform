@@ -4,9 +4,13 @@ import QRCode from "qrcode";
 
 type Student = { id: string; name: string; enrollmentNo: string; batch: string; qrCode: string };
 
-const BATCHES = ["All", "JEE", "NEET"];
+const BATCH_COLORS = ["#0064E0", "#6441D2", "#059669", "#D97706", "#0891B2", "#DC2626"];
+function batchColor(batchName: string, allBatches: string[]) {
+  const idx = allBatches.indexOf(batchName);
+  return BATCH_COLORS[idx % BATCH_COLORS.length] ?? "#0064E0";
+}
 
-function QRCard({ student }: { student: Student }) {
+function QRCard({ student, allBatches }: { student: Student; allBatches: string[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dataUrl, setDataUrl] = useState<string>("");
 
@@ -33,7 +37,7 @@ function QRCard({ student }: { student: Student }) {
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2, fontFamily: "monospace" }}>{student.enrollmentNo}</div>
         </div>
         <span style={{
-          background: student.batch === "JEE" ? "#0064E0" : "#6441D2",
+          background: batchColor(student.batch, allBatches),
           color: "#fff", borderRadius: 100,
           padding: "3px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
           display: "inline-block",
@@ -68,7 +72,15 @@ export default function QRCodesPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [batch, setBatch] = useState("All");
+  const [batches, setBatches] = useState<string[]>(["All"]);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/batches")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { name: string }[]) => setBatches(["All", ...data.map(b => b.name)]))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -135,7 +147,7 @@ export default function QRCodesPage() {
           />
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          {BATCHES.map(b => (
+          {batches.map(b => (
             <button key={b} onClick={() => setBatch(b)} style={{
               padding: "6px 16px", borderRadius: 100, border: "none",
               background: batch === b ? "#0064E0" : "#F1F4F7",
@@ -155,7 +167,7 @@ export default function QRCodesPage() {
         <div style={{ padding: 60, textAlign: "center", color: "#9CA3AF" }}>No students found</div>
       ) : (
         <div className="qr-card-grid">
-          {filtered.map(s => <QRCard key={s.id} student={s} />)}
+          {filtered.map(s => <QRCard key={s.id} student={s} allBatches={batches.slice(1)} />)}
         </div>
       )}
     </div>
