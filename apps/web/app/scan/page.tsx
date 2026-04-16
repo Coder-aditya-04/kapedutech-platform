@@ -34,6 +34,8 @@ export default function ScanPage() {
   const [boxSize, setBoxSize] = useState(380);
   const [camError, setCamError] = useState("");
 
+  const [facing, setFacing] = useState<"environment" | "user">("environment");
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animRef = useRef<number>(0);
@@ -47,12 +49,28 @@ export default function ScanPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setCamError("");
+
+    async function openStream(f: "environment" | "user"): Promise<MediaStream> {
+      // 1. Try hard constraint (exact) — guarantees the requested camera
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: f }, width: { ideal: 1280 }, height: { ideal: 1280 } },
+        });
+      } catch { /* exact failed, try soft */ }
+      // 2. Soft constraint — browser picks closest match
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: f, width: { ideal: 1280 }, height: { ideal: 1280 } },
+        });
+      } catch { /* soft failed, try any camera */ }
+      // 3. Any available camera
+      return navigator.mediaDevices.getUserMedia({ video: true });
+    }
 
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 1280 } },
-        });
+        const stream = await openStream(facing);
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
@@ -73,7 +91,6 @@ export default function ScanPage() {
           const detector = new BarcodeDetector({ formats: ["qr_code"] });
           scanLoop(detector);
         } else {
-          // Fallback: html5-qrcode (ZXing decoder) — works on all browsers
           startHtml5Fallback(stream);
         }
       } catch {
@@ -88,7 +105,7 @@ export default function ScanPage() {
       streamRef.current?.getTracks().forEach(t => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [facing]);
 
   function scanLoop(detector: BarcodeDetector) {
     let detecting = false;
@@ -119,7 +136,7 @@ export default function ScanPage() {
     const size = computeBoxSize();
     const scanner = new Html5Qrcode("qr-fallback");
     scanner.start(
-      { facingMode: "environment" },
+      { facingMode: facing },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { fps: 10, qrbox: { width: Math.round(size * 0.75), height: Math.round(size * 0.75) }, disableFlip: true } as any,
       (text: string) => handleScan(text),
@@ -314,9 +331,27 @@ export default function ScanPage() {
           )}
         </div>
 
-        <p style={{ color: "#9CA3AF", fontSize: 13, margin: 0 }}>
-          {status === "idle" ? "Point camera at QR code" : status === "verifying" ? "QR detected — saving..." : "Ready for next student"}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <p style={{ color: "#9CA3AF", fontSize: 13, margin: 0 }}>
+            {status === "idle" ? "Point camera at QR code" : status === "verifying" ? "QR detected — saving..." : "Ready for next student"}
+          </p>
+          <button
+            onClick={() => setFacing(f => f === "environment" ? "user" : "environment")}
+            title="Flip camera"
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 14px", borderRadius: 20,
+              border: "1px solid #E5E7EB", background: "#FFFFFF",
+              color: "#374151", fontSize: 12, fontWeight: 600,
+              cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 7h-9"/><path d="M14 17H5"/><polyline points="17 4 20 7 17 10"/><polyline points="7 14 4 17 7 20"/>
+            </svg>
+            {facing === "environment" ? "Back" : "Front"}
+          </button>
+        </div>
       </div>
 
       {/* FOOTER CLOCK */}
