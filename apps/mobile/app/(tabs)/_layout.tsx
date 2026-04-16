@@ -6,25 +6,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { savePushToken } from "@/src/api/auth";
 
-// Guard: expo-notifications removed from Expo Go in SDK 53+
-// In production APK it works fine; in Expo Go we just skip it
-type StoredNotification = { id: string; title: string; body: string; time: string; read: boolean };
-
-async function storeNotification(title: string, body: string) {
-  try {
-    const raw = await AsyncStorage.getItem("notifications");
-    const existing: StoredNotification[] = raw ? JSON.parse(raw) : [];
-    const newItem: StoredNotification = {
-      id: Date.now().toString(),
-      title: title ?? "Notification",
-      body: body ?? "",
-      time: new Date().toISOString(),
-      read: false,
-    };
-    const updated = [newItem, ...existing].slice(0, 50);
-    await AsyncStorage.setItem("notifications", JSON.stringify(updated));
-  } catch {}
-}
+// Notification storage is handled centrally in the root _layout.tsx
+// (with proper deduplication by notification ID). Do NOT add listeners here.
 
 async function ensurePushToken() {
   try {
@@ -62,31 +45,6 @@ export default function TabLayout() {
       return;
     }
     ensurePushToken();
-
-    let sub1: { remove: () => void } | null = null;
-    let sub2: { remove: () => void } | null = null;
-
-    (async () => {
-      try {
-        const Notifications = await import("expo-notifications");
-        // App is open — store notification as it arrives
-        sub1 = Notifications.addNotificationReceivedListener((n) => {
-          storeNotification(
-            n.request.content.title ?? "Notification",
-            n.request.content.body ?? ""
-          );
-        });
-        // App was backgrounded — store when user taps the notification
-        sub2 = Notifications.addNotificationResponseReceivedListener((r) => {
-          storeNotification(
-            r.notification.request.content.title ?? "Notification",
-            r.notification.request.content.body ?? ""
-          );
-        });
-      } catch {}
-    })();
-
-    return () => { sub1?.remove(); sub2?.remove(); };
   }, [phone]);
 
   return (

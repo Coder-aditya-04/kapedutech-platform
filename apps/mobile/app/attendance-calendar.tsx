@@ -98,6 +98,7 @@ export default function AttendanceCalendarScreen() {
     setSelectedDate(null);
   }
 
+  // Status color only used for the text label, not the ring
   const pctColor = summary.allTimePct >= 75 ? "#059669" : summary.allTimePct >= 50 ? "#D97706" : "#EF4444";
 
   return (

@@ -135,7 +135,9 @@ export default function DashboardScreen() {
   })();
 
   const student = parent?.students?.[0];
-  const pctColor = summary.allTimePct >= 75 ? "#059669" : summary.allTimePct >= 50 ? "#D97706" : "#EF4444";
+  // Ring is always indigo — looks premium regardless of %. Text inside shows status.
+  const ringColor = "#4F46E5";
+  const pctTextColor = summary.allTimePct >= 75 ? "#059669" : summary.allTimePct >= 50 ? "#D97706" : "#EF4444";
   const todayStatus = today.punchIn && today.punchOut ? "complete" : today.punchIn ? "partial" : "none";
 
   if (loading) {
@@ -191,8 +193,8 @@ export default function DashboardScreen() {
               )}
             </View>
             <View style={styles.ringWrap}>
-              <CircularProgress pct={summary.allTimePct} size={164} stroke={15} color={pctColor}>
-                <Text style={[styles.pctBig, { color: pctColor }]}>{summary.allTimePct}%</Text>
+              <CircularProgress pct={summary.allTimePct} size={164} stroke={15} color={ringColor}>
+                <Text style={[styles.pctBig, { color: pctTextColor }]}>{summary.allTimePct}%</Text>
                 <Text style={styles.pctSub}>attendance</Text>
               </CircularProgress>
             </View>

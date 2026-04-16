@@ -166,6 +166,7 @@ export default function LoginScreen() {
             <Text style={styles.heroTagline}>Real-time student attendance{"\n"}tracking for parents</Text>
           </View>
 
+
           {/* ─── Form card ─── */}
           <View style={styles.formCard}>
             {step === "phone" ? (
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
 
   // ─── Hero
   hero: {
-    backgroundColor: "#F0F2FF",
+    backgroundColor: "#FFFFFF",
     paddingTop: 24,
     paddingBottom: 32,
     alignItems: "center",
@@ -332,9 +333,9 @@ const styles = StyleSheet.create({
     position: "relative",
     minHeight: 300,
   },
-  bubble1: { position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(79,70,229,0.08)" },
-  bubble2: { position: "absolute", bottom: 20, left: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(124,58,237,0.07)" },
-  bubble3: { position: "absolute", top: 60, left: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(99,102,241,0.1)" },
+  bubble1: { position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(79,70,229,0.05)" },
+  bubble2: { position: "absolute", bottom: 20, left: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(79,70,229,0.04)" },
+  bubble3: { position: "absolute", top: 60, left: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(79,70,229,0.05)" },
 
   logoWrap: { alignItems: "center", marginBottom: 20, zIndex: 2 },
   logo: { width: 180, height: 56 },
@@ -367,17 +368,11 @@ const styles = StyleSheet.create({
   // ─── Form card
   formCard: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -16,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 8,
     flex: 1,
   },
   backRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 },
