@@ -142,22 +142,24 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#1A1C2E", justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#818CF8" />
-        <Text style={{ color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 14 }}>Loading dashboard...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }} edges={["top"]}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+          <Text style={{ color: "#94A3B8", marginTop: 14, fontSize: 14 }}>Loading dashboard...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#1A1C2E" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }} edges={["top"]}>
       <ScrollView
-        style={{ flex: 1, backgroundColor: "#F0F2F8" }}
+        style={{ flex: 1, backgroundColor: "#FFFFFF" }}
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}
       >
-        {/* ─── Header (dark) ─── */}
+        {/* ─── Header (white) ─── */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
@@ -175,8 +177,6 @@ export default function DashboardScreen() {
               </View>
             ) : null}
           </View>
-          {/* Curved bottom edge that blends into content */}
-          <View style={styles.headerCurve} />
         </View>
 
         {/* ─── Cards ─── */}
@@ -185,7 +185,7 @@ export default function DashboardScreen() {
           {/* ── Attendance Overview ── */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Attendance Overview</Text>
+              <Text style={styles.cardTitle}>📅 Attendance Overview</Text>
               {summary.currentStreak > 0 && (
                 <View style={styles.streakChip}>
                   <Text style={styles.streakText}>🔥 {summary.currentStreak} day streak</Text>
@@ -311,19 +311,30 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* ── Calendar CTA ── */}
-          <TouchableOpacity style={styles.calCTA} onPress={() => router.push("/attendance-calendar" as never)} activeOpacity={0.82}>
-            <View style={styles.calCTALeft}>
-              <View style={styles.calCTAIcon}>
-                <MaterialCommunityIcons name="calendar-month" size={22} color="#4F46E5" />
-              </View>
-              <View>
-                <Text style={styles.calCTATitle}>Attendance Calendar</Text>
-                <Text style={styles.calCTASub}>View monthly &amp; year-wise history</Text>
+          {/* ── Calendar Card (same style as other cards) ── */}
+          <TouchableOpacity style={styles.card} onPress={() => router.push("/attendance-calendar" as never)} activeOpacity={0.88}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>🗓️ Attendance Calendar</Text>
+              <View style={styles.weekNavBtn}>
+                <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
               </View>
             </View>
-            <View style={styles.calCTAArrow}>
-              <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+            <Text style={{ color: "#94A3B8", fontSize: 13, marginBottom: 14 }}>Monthly &amp; year-wise attendance history</Text>
+            <View style={styles.calCardRow}>
+              <View style={styles.calCardStat}>
+                <Text style={[styles.calCardNum, { color: "#4F46E5" }]}>{summary.totalPresent}</Text>
+                <Text style={styles.calCardLbl}>Days Present</Text>
+              </View>
+              <View style={styles.calCardDiv} />
+              <View style={styles.calCardStat}>
+                <Text style={[styles.calCardNum, { color: pctTextColor }]}>{summary.allTimePct}%</Text>
+                <Text style={styles.calCardLbl}>Overall</Text>
+              </View>
+              <View style={styles.calCardDiv} />
+              <View style={styles.calCardStat}>
+                <Text style={[styles.calCardNum, { color: "#D97706" }]}>{summary.currentStreak}</Text>
+                <Text style={styles.calCardLbl}>🔥 Streak</Text>
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -363,22 +374,21 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Dark header
-  header: { backgroundColor: "#1A1C2E", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 0 },
-  headerRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 20 },
-  greeting: { fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "500", letterSpacing: 0.2 },
-  studentName: { fontSize: 22, fontWeight: "800", color: "#FFFFFF", marginTop: 3, letterSpacing: -0.3 },
-  batchTag: { marginTop: 8, alignSelf: "flex-start", backgroundColor: "rgba(79,70,229,0.3)", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: "rgba(129,140,248,0.4)" },
-  batchTagText: { color: "#A5B4FC", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#4F46E5", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "rgba(129,140,248,0.4)" },
+  // White header
+  header: { backgroundColor: "#FFFFFF", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  headerRow: { flexDirection: "row", alignItems: "flex-start" },
+  greeting: { fontSize: 13, color: "#94A3B8", fontWeight: "500", letterSpacing: 0.2 },
+  studentName: { fontSize: 22, fontWeight: "800", color: "#0F172A", marginTop: 3, letterSpacing: -0.3 },
+  batchTag: { marginTop: 8, alignSelf: "flex-start", backgroundColor: "#EEF2FF", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: "#C7D2FE" },
+  batchTagText: { color: "#4F46E5", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#4F46E5", justifyContent: "center", alignItems: "center" },
   avatarText: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  headerCurve: { height: 28, backgroundColor: "#F0F2F8", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
 
-  // Content area
-  content: { backgroundColor: "#F0F2F8", paddingHorizontal: 16, gap: 14, paddingBottom: 8 },
+  // Content area — white
+  content: { backgroundColor: "#FFFFFF", paddingHorizontal: 16, gap: 14, paddingTop: 16, paddingBottom: 8 },
 
-  // Card base
-  card: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 18, shadowColor: "#3730A3", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
+  // Card base — border instead of shadow on white bg
+  card: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 18, borderWidth: 1, borderColor: "#E8ECF4", shadowColor: "#4F46E5", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
 
@@ -428,13 +438,12 @@ const styles = StyleSheet.create({
   legendSwatch: { width: 11, height: 11, borderRadius: 3, borderWidth: 1.5 },
   legendLbl: { fontSize: 11, color: "#94A3B8" },
 
-  // Calendar CTA
-  calCTA: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", shadowColor: "#3730A3", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
-  calCTALeft: { flexDirection: "row", alignItems: "center", gap: 14 },
-  calCTAIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center" },
-  calCTATitle: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
-  calCTASub: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  calCTAArrow: { width: 30, height: 30, borderRadius: 9, backgroundColor: "#EEF2FF", justifyContent: "center", alignItems: "center" },
+  // Calendar card stats
+  calCardRow: { flexDirection: "row", backgroundColor: "#F8FAFF", borderRadius: 14, padding: 14 },
+  calCardStat: { flex: 1, alignItems: "center", gap: 4 },
+  calCardDiv: { width: 1, backgroundColor: "#E2E8F0", marginVertical: 4 },
+  calCardNum: { fontSize: 22, fontWeight: "800" },
+  calCardLbl: { fontSize: 11, color: "#94A3B8", textAlign: "center" },
 
   // Recent activity
   actDivider: { height: 1, backgroundColor: "#F8FAFC", marginVertical: 2 },
