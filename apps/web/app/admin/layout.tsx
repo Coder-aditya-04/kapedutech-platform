@@ -70,10 +70,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("admin_auth") !== "true") {
+    if (pathname !== "/admin" && localStorage.getItem("admin_auth") !== "true") {
       router.replace("/admin");
     }
-  }, [router]);
+  }, [router, pathname]);
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
