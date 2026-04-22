@@ -44,18 +44,14 @@ export default function AdminLoginPage() {
         {/* Logo block */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
-            width: 64, height: 64, borderRadius: 16,
+            width: 120, height: 120, borderRadius: 28,
             background: "#FFFFFF",
             border: "1px solid #DEE3E9",
             display: "inline-flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 2px 4px 0 rgba(0,0,0,0.1), 0 12px 28px 0 rgba(0,0,0,0.08)",
-            marginBottom: 16,
+            boxShadow: "0 2px 4px 0 rgba(0,0,0,0.08), 0 16px 40px 0 rgba(0,0,0,0.10)",
+            marginBottom: 20,
           }}>
-            <Image src="/kap_fav.png" alt="KAP" width={44} height={44} style={{ objectFit: "contain" }} />
-          </div>
-          <div style={{ fontSize: 24, lineHeight: 1.2, marginBottom: 6 }}>
-            <span style={{ fontWeight: 700, color: "#1C2B33" }}>KAP</span>
-            <span style={{ fontWeight: 400, color: "#5D6C7B" }}> Edutech</span>
+            <Image src="/kap_fav.png" alt="KAP" width={90} height={90} style={{ objectFit: "contain" }} />
           </div>
           <div style={{ fontSize: 14, color: "#5D6C7B" }}>Sign in to Admin Portal</div>
         </div>
