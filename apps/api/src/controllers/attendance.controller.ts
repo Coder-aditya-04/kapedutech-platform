@@ -10,16 +10,22 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const [studentId] = qrCode.split(":");
-  if (!studentId) {
-    res.status(400).json({ message: "Invalid QR code format." });
-    return;
+  // Support both formats:
+  // 1. "studentId:enrollmentNo" — KAP-generated QR codes
+  // 2. "enrollmentNo" — existing institute ID card QR codes
+  let student;
+  if (qrCode.includes(":")) {
+    const [studentId] = qrCode.split(":");
+    student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { parent: true },
+    });
+  } else {
+    student = await prisma.student.findFirst({
+      where: { enrollmentNo: qrCode.trim() },
+      include: { parent: true },
+    });
   }
-
-  const student = await prisma.student.findUnique({
-    where: { id: studentId },
-    include: { parent: true },
-  });
 
   if (!student) {
     res.status(404).json({ message: "Student not found." });
