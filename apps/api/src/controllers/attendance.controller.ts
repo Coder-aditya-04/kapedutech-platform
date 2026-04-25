@@ -10,9 +10,10 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Support both formats:
+  // Support multiple QR formats:
   // 1. "studentId:enrollmentNo" — KAP-generated QR codes
-  // 2. "enrollmentNo" — existing institute ID card QR codes
+  // 2. JSON {"roll_number":"...","validity":...} — Unacademy/institute ID cards
+  // 3. Plain enrollment number string
   let student;
   if (qrCode.includes(":")) {
     const [studentId] = qrCode.split(":");
@@ -21,8 +22,13 @@ export async function qrScan(req: Request, res: Response): Promise<void> {
       include: { parent: true },
     });
   } else {
+    let enrollmentNo = qrCode.trim();
+    try {
+      const parsed = JSON.parse(qrCode);
+      if (parsed?.roll_number) enrollmentNo = String(parsed.roll_number).trim();
+    } catch { /* not JSON, use raw string */ }
     student = await prisma.student.findFirst({
-      where: { enrollmentNo: qrCode.trim() },
+      where: { enrollmentNo },
       include: { parent: true },
     });
   }
