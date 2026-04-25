@@ -131,6 +131,29 @@ export async function verifyOtpEmail(email: string, otp: string): Promise<Verify
   return data as VerifyOtpResponse;
 }
 
+export type TestResult = {
+  id: string;
+  testName: string;
+  testDate: string;
+  rank: number | null;
+  totalInBatch: number | null;
+  scores: Record<string, number>;
+  total: number;
+  percentage: number;
+  percentile: number | null;
+  uploadedAt: string;
+};
+
+export async function getStudentResults(studentId: string, token: string): Promise<TestResult[]> {
+  try {
+    const res = await fetch(`${ATTENDANCE_URL}/student/${studentId}/results`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+
 export async function verifyFirebaseToken(idToken: string): Promise<VerifyOtpResponse> {
   const res = await fetch(FIREBASE_VERIFY_URL, {
     method: "POST",
