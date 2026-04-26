@@ -1,10 +1,12 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 type Batch = { id: string; name: string; createdAt: string };
 type Analytics = Batch & { totalStudents: number; avgAttendancePct: number; totalWorkingDays?: number };
 
 export default function BatchesPage() {
+  const router = useRouter();
   const [batches, setBatches] = useState<Analytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -94,14 +96,20 @@ export default function BatchesPage() {
             const color = COLORS[i % COLORS.length];
             const pct = batch.avgAttendancePct;
             return (
-              <div key={batch.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: 24, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
+              <div
+                key={batch.id}
+                onClick={() => router.push(`/admin/batches/${encodeURIComponent(batch.name)}`)}
+                style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: 24, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", position: "relative", overflow: "hidden", cursor: "pointer", transition: "box-shadow 0.2s, transform 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(0,0,0,0.1)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 6px rgba(0,0,0,0.05)"; (e.currentTarget as HTMLDivElement).style.transform = "none"; }}
+              >
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: color, borderRadius: "16px 16px 0 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <span style={{ background: `${color}18`, color, borderRadius: 100, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{batch.name}</span>
                     <p style={{ color: "#6B7280", fontSize: 13, margin: "8px 0 0" }}>{batch.totalStudents} student{batch.totalStudents !== 1 ? "s" : ""}</p>
                   </div>
-                  <button onClick={() => handleDelete(batch)} title="Delete batch" style={{ border: "1px solid #FCA5A5", borderRadius: 8, background: "#FFF5F5", color: "#DC2626", width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0 }}>✕</button>
+                  <button onClick={e => { e.stopPropagation(); handleDelete(batch); }} title="Delete batch" style={{ border: "1px solid #FCA5A5", borderRadius: 8, background: "#FFF5F5", color: "#DC2626", width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0 }}>✕</button>
                 </div>
 
                 {/* Attendance bar */}
@@ -116,6 +124,9 @@ export default function BatchesPage() {
                   {batch.totalWorkingDays !== undefined && (
                     <p style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 0" }}>{batch.totalWorkingDays} working day{batch.totalWorkingDays !== 1 ? "s" : ""} in period</p>
                   )}
+                </div>
+                <div style={{ marginTop: 14, fontSize: 12, color: color, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                  View batch details <span style={{ fontSize: 14 }}>→</span>
                 </div>
               </div>
             );

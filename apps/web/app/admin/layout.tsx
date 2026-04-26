@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Moon, Sun } from "@phosphor-icons/react";
 
 const NAV = [
   {
@@ -68,6 +69,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("admin_dark_mode");
+    const isDark = saved === "true";
+    setDarkMode(isDark);
+    if (isDark) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/admin" && localStorage.getItem("admin_auth") !== "true") {
@@ -75,8 +85,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [router, pathname]);
 
-  // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
+
+  function toggleDark() {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("admin_dark_mode", String(next));
+    if (next) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }
 
   function handleLogout() {
     localStorage.removeItem("admin_auth");
@@ -88,38 +105,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const activeLabel = NAV.find(n => pathname.startsWith(n.href))?.label ?? "Admin";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", background: "#F1F4F7" }}>
+    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "var(--font-geist-sans), 'Geist', system-ui, sans-serif", background: "var(--admin-bg)" }}>
 
-      {/* Overlay (mobile) */}
       <div
         className={`sidebar-overlay${sidebarOpen ? " open" : ""}`}
         onClick={() => setSidebarOpen(false)}
       />
 
-      {/* Sidebar */}
       <aside className={`admin-sidebar${sidebarOpen ? " open" : ""}`}>
 
-        {/* Logo */}
-        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #DEE3E9", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--admin-sidebar-border)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
           <Image src="/kap_fav.png" alt="KAP Edutech" width={160} height={52} style={{ objectFit: "contain", width: "100%", height: "auto", maxHeight: 56 }} priority />
-          <span style={{ fontSize: 10, fontWeight: 600, color: "#BCC0C4", letterSpacing: 1.5, textTransform: "uppercase" }}>Admin Portal</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--admin-text-faint)", letterSpacing: 1.5, textTransform: "uppercase" }}>Admin Portal</span>
         </div>
 
-        {/* Nav */}
         <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#BCC0C4", letterSpacing: 1.2, textTransform: "uppercase", padding: "6px 10px 8px" }}>Menu</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--admin-text-faint)", letterSpacing: 1.2, textTransform: "uppercase", padding: "6px 10px 8px" }}>Menu</div>
           {NAV.map(item => {
             const active = pathname.startsWith(item.href);
             return (
               <Link key={item.href} href={item.href} style={{
                 display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontSize: 14,
-                fontWeight: active ? 600 : 400,
-                background: active ? "#E8F3FF" : "transparent",
-                color: active ? "#0064E0" : "#5D6C7B",
+                padding: "9px 12px", borderRadius: 8, textDecoration: "none",
+                fontSize: 14, fontWeight: active ? 600 : 400,
+                background: active ? (darkMode ? "rgba(0,100,224,0.15)" : "#E8F3FF") : "transparent",
+                color: active ? "#0064E0" : "var(--admin-text-muted)",
                 transition: "background 0.15s, color 0.15s",
                 borderLeft: active ? "3px solid #0064E0" : "3px solid transparent",
               }}>
@@ -130,17 +140,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: "10px 10px 16px", borderTop: "1px solid #DEE3E9" }}>
-          <div style={{ padding: "9px 12px", borderRadius: 8, background: "#F7F8FA", marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: "#BCC0C4" }}>Signed in as</div>
-            <div style={{ fontSize: 13, color: "#1C2B33", fontWeight: 600, marginTop: 2 }}>Admin</div>
+        <div style={{ padding: "10px 10px 16px", borderTop: "1px solid var(--admin-sidebar-border)" }}>
+          <div style={{ padding: "9px 12px", borderRadius: 8, background: darkMode ? "rgba(255,255,255,0.05)" : "#F7F8FA", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--admin-text-faint)" }}>Signed in as</div>
+            <div style={{ fontSize: 13, color: "var(--admin-text)", fontWeight: 600, marginTop: 2 }}>Admin</div>
           </div>
+
+          <button onClick={toggleDark} style={{
+            width: "100%", padding: "9px 12px", border: "1px solid var(--admin-card-border)",
+            borderRadius: 8, background: "transparent",
+            color: "var(--admin-text-muted)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8, marginBottom: 6,
+          }}>
+            {darkMode ? <Sun size={14} weight="bold" /> : <Moon size={14} weight="bold" />}
+            {darkMode ? "Light Mode" : "Dark Mode"}
+          </button>
+
           <button onClick={handleLogout} style={{
             width: "100%", padding: "9px 12px",
-            border: "1px solid #CED0D4",
-            borderRadius: 8, background: "#fff",
-            color: "#5D6C7B", fontSize: 13, fontWeight: 500, cursor: "pointer",
+            border: "1px solid var(--admin-card-border)",
+            borderRadius: 8, background: "transparent",
+            color: "var(--admin-text-muted)", fontSize: 13, fontWeight: 500, cursor: "pointer",
             display: "flex", alignItems: "center", gap: 8,
           }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -151,21 +171,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main */}
       <main className="admin-main">
-        {/* Mobile top bar */}
         <div className="admin-topbar">
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            style={{ background: "none", border: "none", padding: 6, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "#1C2B33" }}
+            style={{ background: "none", border: "none", padding: 6, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, color: "var(--admin-text)" }}
             aria-label="Open menu"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#1C2B33" }}>{activeLabel}</span>
-          <Image src="/kap_fav.png" alt="KAP Edutech" width={80} height={28} style={{ height: 28, width: "auto", objectFit: "contain" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--admin-text)" }}>{activeLabel}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={toggleDark} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "var(--admin-text-muted)", display: "flex", alignItems: "center" }}>
+              {darkMode ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+            </button>
+            <Image src="/kap_fav.png" alt="KAP Edutech" width={80} height={28} style={{ height: 28, width: "auto", objectFit: "contain" }} />
+          </div>
         </div>
 
         {children}

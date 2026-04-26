@@ -11,7 +11,7 @@ import {
   getStudentAttendanceHistory,
   importStudents,
 } from "../controllers/admin.controller.js";
-import { listBatches, createBatch, deleteBatch, batchAnalytics } from "../controllers/batch.controller.js";
+import { listBatches, createBatch, deleteBatch, batchAnalytics, batchDetail } from "../controllers/batch.controller.js";
 import { uploadResults, listTests, getTestResults } from "../controllers/result.controller.js";
 
 const router = Router();
@@ -35,6 +35,7 @@ router.get("/batches", listBatches);
 router.post("/batches", createBatch);
 router.delete("/batches/:id", deleteBatch);
 router.get("/batches/analytics", batchAnalytics);
+router.get("/batches/detail/:name", batchDetail);
 
 // Results
 router.post("/results", uploadResults);

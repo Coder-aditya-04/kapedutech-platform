@@ -1,9 +1,40 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
   --sidebar-width: 248px;
+
+  /* Admin dark mode tokens */
+  --admin-bg: #F1F4F7;
+  --admin-sidebar-bg: #ffffff;
+  --admin-sidebar-border: #DEE3E9;
+  --admin-topbar-bg: #ffffff;
+  --admin-topbar-border: #DEE3E9;
+  --admin-text: #1C2B33;
+  --admin-text-muted: #5D6C7B;
+  --admin-text-faint: #9CA3AF;
+  --admin-card-bg: #ffffff;
+  --admin-card-border: #E5E7EB;
+  --admin-input-border: #E5E7EB;
+  --admin-page-bg: #F9FAFB;
+}
+
+.dark {
+  --admin-bg: #0F172A;
+  --admin-sidebar-bg: #1E293B;
+  --admin-sidebar-border: #334155;
+  --admin-topbar-bg: #1E293B;
+  --admin-topbar-border: #334155;
+  --admin-text: #F1F5F9;
+  --admin-text-muted: #94A3B8;
+  --admin-text-faint: #64748B;
+  --admin-card-bg: #1E293B;
+  --admin-card-border: #334155;
+  --admin-input-border: #334155;
+  --admin-page-bg: #0F172A;
 }
 
 @theme inline {
@@ -13,29 +44,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), 'Geist', system-ui, sans-serif;
 }
 
 /* ── Admin responsive layout ── */
 .admin-sidebar {
   width: var(--sidebar-width);
-  background: #fff;
+  background: var(--admin-sidebar-bg);
   display: flex;
   flex-direction: column;
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 40;
-  border-right: 1px solid #DEE3E9;
+  border-right: 1px solid var(--admin-sidebar-border);
   box-shadow: 2px 0 8px rgba(0,0,0,0.04);
   transition: transform 0.25s ease;
 }
@@ -44,7 +68,7 @@ body {
   flex: 1;
   margin-left: var(--sidebar-width);
   min-height: 100vh;
-  background: #F1F4F7;
+  background: var(--admin-bg);
 }
 
 .admin-topbar { display: none; }
@@ -116,8 +140,8 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    background: #fff;
-    border-bottom: 1px solid #DEE3E9;
+    background: var(--admin-topbar-bg);
+    border-bottom: 1px solid var(--admin-topbar-border);
     position: sticky;
     top: 0;
     z-index: 30;
