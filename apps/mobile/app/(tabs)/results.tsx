@@ -118,7 +118,7 @@ export default function ResultsScreen() {
     try {
       const [parentStr, tokenStr] = await Promise.all([
         AsyncStorage.getItem("parent"),
-        AsyncStorage.getItem("token"),
+        AsyncStorage.getItem("auth_token"),
       ]);
       if (!parentStr || !tokenStr) return;
       const parent: Parent = JSON.parse(parentStr);

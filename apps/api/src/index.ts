@@ -29,6 +29,20 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ message });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`);
 });
+
+// Keep Render free tier awake: ping own health endpoint every 14 minutes
+// Render sleeps after 15 min inactivity — this resets that timer continuously
+if (process.env["RENDER"]) {
+  const SELF_URL = `https://${process.env["RENDER_EXTERNAL_HOSTNAME"]}/health`;
+  setInterval(async () => {
+    try {
+      await fetch(SELF_URL);
+      console.log("[keep-alive] ping ok");
+    } catch (e) {
+      console.warn("[keep-alive] ping failed:", e);
+    }
+  }, 14 * 60 * 1000);
+}
