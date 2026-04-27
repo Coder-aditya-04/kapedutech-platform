@@ -4,9 +4,10 @@ import { sendBatchPushNotifications } from "../services/notification.service.js"
 
 // Admin: upload results for a batch test
 export async function uploadResults(req: Request, res: Response): Promise<void> {
-  const { testName, testDate, results } = req.body as {
+  const { testName, testDate, results, subjectMaxes } = req.body as {
     testName?: string;
     testDate?: string;
+    subjectMaxes?: Record<string, number>;
     results?: {
       studentId: string;
       rank: number;
@@ -48,6 +49,7 @@ export async function uploadResults(req: Request, res: Response): Promise<void> 
       rank: r.rank,
       totalInBatch: r.totalInBatch,
       scores: r.scores,
+      ...(subjectMaxes ? { subjectMaxes } : {}),
       total: r.total,
       percentage: r.percentage,
       percentile: r.percentile,

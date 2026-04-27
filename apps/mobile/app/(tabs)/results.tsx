@@ -93,7 +93,7 @@ function ResultCard({ result, expanded, onToggle }: { result: TestResult; expand
             Subject Breakdown
           </Text>
           {subjects.map(([subject, score]) => (
-            <ScoreBar key={subject} label={subject} score={score} />
+            <ScoreBar key={subject} label={subject} score={score} max={result.subjectMaxes?.[subject] ?? 180} />
           ))}
         </View>
       )}

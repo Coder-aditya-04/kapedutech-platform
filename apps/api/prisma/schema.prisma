@@ -44,8 +44,9 @@ model TestResult {
   student     Student  @relation(fields: [studentId], references: [id])
   rank        Int?
   totalInBatch Int?
-  scores      Json
-  total       Float
+  scores       Json
+  subjectMaxes Json?
+  total        Float
   percentage  Float
   percentile  Float?
   uploadedAt  DateTime @default(now())

@@ -258,7 +258,7 @@ export default function ResultsPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mappings, setMappings] = useState<{
     nameCol: string; rankCol: string; enrollmentCol: string; totalCol: string;
-    subjects: { label: string; col: string }[];
+    subjects: { label: string; col: string; max: number }[];
   }>({ nameCol: "", rankCol: "", enrollmentCol: "", totalCol: "", subjects: [] });
   const [parsed, setParsed] = useState<ParsedRow[]>([]);
   const [preview, setPreview] = useState<{ studentId: string; name: string; rank: number; total: number; percentage: number; scores: Record<string, number> }[]>([]);
@@ -277,11 +277,11 @@ export default function ResultsPage() {
 
   function autoDetect(hdrs: string[]) {
     const find = (keys: string[]) => hdrs.find(h => keys.some(k => h.includes(k))) ?? "";
-    const subjects: { label: string; col: string }[] = [];
+    const subjects: { label: string; col: string; max: number }[] = [];
     const subjectKeywords = ["physics", "chemistry", "botany", "zoology", "biology", "maths", "math", "english"];
     hdrs.forEach(h => {
       const match = subjectKeywords.find(k => h.includes(k));
-      if (match) subjects.push({ label: match.charAt(0).toUpperCase() + match.slice(1), col: h });
+      if (match) subjects.push({ label: match.charAt(0).toUpperCase() + match.slice(1), col: h, max: 180 });
     });
     setMappings({ nameCol: find(["name"]), rankCol: find(["rank"]), enrollmentCol: find(["roll", "enrollment", "rollno"]), totalCol: find(["total"]), subjects });
   }
@@ -315,7 +315,9 @@ export default function ResultsPage() {
         if (sub.label && sub.col) scores[sub.label] = parseFloat(row[sub.col] ?? "0") || 0;
       }
       const total = parseFloat(row[mappings.totalCol] ?? "0") || 0;
-      const maxMarks = mappings.subjects.length > 0 ? mappings.subjects.length * 180 : 720;
+      const maxMarks = mappings.subjects.length > 0
+        ? mappings.subjects.reduce((s, sub) => s + (sub.max || 180), 0)
+        : 720;
       const percentage = parseFloat(((total / maxMarks) * 100).toFixed(2));
       return { rank: parseInt(row[mappings.rankCol] ?? "0") || 0, name: row[mappings.nameCol] ?? "", enrollmentNo: mappings.enrollmentCol ? (row[mappings.enrollmentCol] ?? "") : "", scores, total, percentage };
     }).filter(r => r.name && r.rank > 0);
@@ -335,7 +337,12 @@ export default function ResultsPage() {
     try {
       const res = await fetch("/api/admin/results", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testName: testName.trim(), testDate, results: preview.map(r => ({ studentId: r.studentId, rank: r.rank, totalInBatch: parsed.length, scores: r.scores, total: r.total, percentage: r.percentage })) }),
+        body: JSON.stringify({
+          testName: testName.trim(),
+          testDate,
+          subjectMaxes: mappings.subjects.reduce<Record<string, number>>((m, s) => { if (s.label) m[s.label] = s.max || 180; return m; }, {}),
+          results: preview.map(r => ({ studentId: r.studentId, rank: r.rank, totalInBatch: parsed.length, scores: r.scores, total: r.total, percentage: r.percentage })),
+        }),
       });
       const d = await res.json();
       if (res.ok) { showToast(d.message, true); setTestName(""); setPasteText(""); setRows([]); setHeaders([]); setPreview([]); setParsed([]); load(); }
@@ -410,15 +417,21 @@ export default function ResultsPage() {
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0 }}>Subjects</p>
-                  <button onClick={() => setMappings(m => ({ ...m, subjects: [...m.subjects, { label: "", col: "" }] }))} style={{ fontSize: 12, color: "#0064E0", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add</button>
+                  <button onClick={() => setMappings(m => ({ ...m, subjects: [...m.subjects, { label: "", col: "", max: 180 }] }))} style={{ fontSize: 12, color: "#0064E0", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add</button>
                 </div>
                 {mappings.subjects.map((sub, i) => (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 24px", gap: 6, marginBottom: 6 }}>
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 72px 24px", gap: 6, marginBottom: 6 }}>
                     <input placeholder="Label (e.g. Physics)" value={sub.label} onChange={e => setMappings(m => { const s = [...m.subjects]; s[i] = { ...s[i], label: e.target.value }; return { ...m, subjects: s }; })} style={{ ...inp, fontSize: 13 }} />
                     <select value={sub.col} onChange={e => setMappings(m => { const s = [...m.subjects]; s[i] = { ...s[i], col: e.target.value }; return { ...m, subjects: s }; })} style={{ ...inp, fontSize: 13 }}>
                       <option value="">— column —</option>
                       {headers.map(h => <option key={h} value={h}>{h}</option>)}
                     </select>
+                    <input
+                      type="number" placeholder="Max" min={1} value={sub.max || ""}
+                      onChange={e => setMappings(m => { const s = [...m.subjects]; s[i] = { ...s[i], max: parseInt(e.target.value) || 180 }; return { ...m, subjects: s }; })}
+                      style={{ ...inp, fontSize: 13 }}
+                      title="Max marks for this subject"
+                    />
                     <button onClick={() => setMappings(m => ({ ...m, subjects: m.subjects.filter((_, j) => j !== i) }))} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", borderRadius: 6, cursor: "pointer" }}>✕</button>
                   </div>
                 ))}

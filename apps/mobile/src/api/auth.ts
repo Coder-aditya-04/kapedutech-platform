@@ -138,6 +138,7 @@ export type TestResult = {
   rank: number | null;
   totalInBatch: number | null;
   scores: Record<string, number>;
+  subjectMaxes: Record<string, number> | null;
   total: number;
   percentage: number;
   percentile: number | null;
