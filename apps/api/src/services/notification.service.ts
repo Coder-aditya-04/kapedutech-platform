@@ -19,3 +19,23 @@ export async function sendPushNotification(
   const data = await res.json();
   console.log(`[Notification] Response:`, JSON.stringify(data));
 }
+
+// Send up to 100 notifications in one Expo batch request
+export async function sendBatchPushNotifications(
+  messages: { to: string; title: string; body: string }[]
+): Promise<void> {
+  const valid = messages.filter(m => m.to?.startsWith("ExponentPushToken["));
+  if (!valid.length) return;
+  console.log(`[Notification] Batch sending ${valid.length} notifications`);
+  try {
+    const res = await fetch(EXPO_PUSH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(valid.map(m => ({ ...m, sound: "default" }))),
+    });
+    const data = await res.json();
+    console.log(`[Notification] Batch response:`, JSON.stringify(data));
+  } catch (err) {
+    console.error(`[Notification] Batch send failed:`, err);
+  }
+}

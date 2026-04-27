@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
+import { sendBatchPushNotifications } from "../services/notification.service.js";
 
 // Admin: upload results for a batch test
 export async function uploadResults(req: Request, res: Response): Promise<void> {
@@ -52,6 +53,23 @@ export async function uploadResults(req: Request, res: Response): Promise<void> 
       percentile: r.percentile,
     })),
   });
+
+  // Notify parents — fire-and-forget, never block the response
+  const fmtDate = new Date(testDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  prisma.student.findMany({
+    where: { id: { in: results.map(r => r.studentId) } },
+    select: { name: true, parent: { select: { pushToken: true } }, id: true },
+  }).then(students => {
+    const matched = withPercentile.reduce<Record<string, number>>((m, r) => { m[r.studentId] = r.percentage; return m; }, {});
+    const messages = students
+      .filter(s => s.parent.pushToken)
+      .map(s => ({
+        to: s.parent.pushToken!,
+        title: "Test Result Available",
+        body: `${s.name}'s result for ${testName} (${fmtDate}) is ready — ${matched[s.id]?.toFixed(1)}%`,
+      }));
+    return sendBatchPushNotifications(messages);
+  }).catch(err => console.error("[Results] Notification error:", err));
 
   res.status(201).json({ message: `${results.length} results uploaded.` });
 }
