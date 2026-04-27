@@ -52,12 +52,21 @@ function groupByDay(items: StoredNotification[]) {
 }
 
 export default function NotificationsScreen() {
-  const [items, setItems] = useState<StoredNotification[]>([]);
+  const [items,       setItems]       = useState<StoredNotification[]>([]);
+  const [studentName, setStudentName] = useState<string | null>(null);
 
   async function loadNotifications() {
     try {
-      const raw = await AsyncStorage.getItem("notifications");
+      const [raw, parentRaw] = await Promise.all([
+        AsyncStorage.getItem("notifications"),
+        AsyncStorage.getItem("parent"),
+      ]);
       if (raw) setItems(JSON.parse(raw));
+      if (parentRaw) {
+        const p = JSON.parse(parentRaw);
+        const firstName = p?.students?.[0]?.name?.split(" ")[0] ?? null;
+        setStudentName(firstName);
+      }
     } catch {}
   }
 
@@ -86,7 +95,7 @@ export default function NotificationsScreen() {
             </View>
             <Text variant="titleMedium" style={styles.emptyTitle}>No notifications yet</Text>
             <Text variant="bodySmall" style={styles.emptyBody}>
-              You&apos;ll see attendance alerts here when your child scans in or out at school.
+              You&apos;ll see attendance alerts here when {studentName ?? "your child"} scans in or out at school.
             </Text>
           </View>
         ) : (

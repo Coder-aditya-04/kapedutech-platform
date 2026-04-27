@@ -163,7 +163,9 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.greeting}>
+                {getGreeting()}{student ? `, ${student.name.split(" ")[0]}` : ""}
+              </Text>
               <Text style={styles.studentName} numberOfLines={1}>{student?.name ?? `+91 ${phone}`}</Text>
               {student?.batch ? (
                 <View style={styles.batchTag}>
