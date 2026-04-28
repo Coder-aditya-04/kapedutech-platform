@@ -33,6 +33,7 @@ async function registerForPushNotifications(): Promise<string | null> {
 
 type Step = "phone" | "otp";
 const OTP_LENGTH = 6;
+const OTP_EXPIRY_SECONDS = 300; // Firebase phone auth session = 5 min
 
 // Floating feature card used in the illustration
 function FeatureCard({ icon, label, color, bg, style }: {
@@ -53,12 +54,27 @@ export default function LoginScreen() {
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [otpTimer, setOtpTimer] = useState(0);
   const confirmationRef = useRef<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const otpRefs = useRef<(RNTextInput | null)[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (step === "otp") setTimeout(() => otpRefs.current[0]?.focus(), 100);
   }, [step]);
+
+  function startOtpTimer() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setOtpTimer(OTP_EXPIRY_SECONDS);
+    timerRef.current = setInterval(() => {
+      setOtpTimer(t => {
+        if (t <= 1) { clearInterval(timerRef.current!); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
   async function handleSendOtp() {
     if (!/^\d{10}$/.test(phone)) {
@@ -69,7 +85,9 @@ export default function LoginScreen() {
     try {
       const confirmation = await auth().signInWithPhoneNumber(`+91${phone}`);
       confirmationRef.current = confirmation;
+      setOtpDigits(Array(OTP_LENGTH).fill(""));
       setStep("otp");
+      startOtpTimer();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send OTP.");
     } finally { setLoading(false); }
@@ -93,7 +111,16 @@ export default function LoginScreen() {
         .then((pushToken) => { if (pushToken) savePushToken(parent.id, pushToken); })
         .catch((e) => console.log("[Push] Registration failed:", e));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "OTP verification failed.");
+      const msg = err instanceof Error ? err.message : "OTP verification failed.";
+      if (msg.includes("session-expired") || msg.includes("expired")) {
+        setOtpDigits(Array(OTP_LENGTH).fill(""));
+        setError("OTP expired. Tap 'Resend OTP' to get a new code.");
+        if (timerRef.current) clearInterval(timerRef.current);
+        setOtpTimer(0);
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      } else {
+        setError(msg);
+      }
     } finally { setLoading(false); }
   }
 
@@ -255,6 +282,20 @@ export default function LoginScreen() {
                   6-digit code sent to{" "}
                   <Text style={styles.phoneHighlight}>+91 {phone}</Text>
                 </Text>
+                {otpTimer > 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <Ionicons name="time-outline" size={13} color={otpTimer <= 60 ? "#DC2626" : "#059669"} />
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: otpTimer <= 60 ? "#DC2626" : "#059669" }}>
+                      OTP expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}
+                    </Text>
+                  </View>
+                )}
+                {otpTimer === 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <Ionicons name="alert-circle-outline" size={13} color="#DC2626" />
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>OTP expired — tap Resend below</Text>
+                  </View>
+                )}
 
                 <Text style={styles.fieldLabel}>One-Time Password</Text>
                 <View style={styles.otpRow}>
@@ -297,7 +338,7 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={handleSendOtp} style={styles.resendBtn}>
+                <TouchableOpacity onPress={() => { setOtpDigits(Array(OTP_LENGTH).fill("")); handleSendOtp(); }} style={styles.resendBtn}>
                   <Text style={styles.resendText}>
                     Didn&apos;t receive the code?{" "}
                     <Text style={styles.resendLink}>Resend OTP</Text>
